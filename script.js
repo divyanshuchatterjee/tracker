@@ -656,24 +656,52 @@ function renderCell(row, column) {
     const value =
         row.cells?.[column.id] ?? "";
 
-
+    // CHECKBOX
     if (column.type === "checkbox") {
+
+        const checked =
+            value === true;
 
         return `
             <td class="checkbox-cell">
 
+                <label class="custom-checkbox">
+
+                    <input
+                        type="checkbox"
+                        ${checked ? "checked" : ""}
+                        onchange="
+                            updateCheckbox(
+                                '${row.id}',
+                                '${column.id}',
+                                this.checked
+                            )
+                        "
+                    >
+
+                    <span class="checkmark"></span>
+
+                </label>
+
+            </td>
+        `;
+    }
+
+    // DATE
+    if (column.type === "date") {
+
+        return `
+            <td>
+
                 <input
-                    type="checkbox"
-                    ${
-                        value === true
-                            ? "checked"
-                            : ""
-                    }
+                    class="cell-input"
+                    type="date"
+                    value="${escapeAttribute(value)}"
                     onchange="
-                        updateCheckbox(
+                        updateCell(
                             '${row.id}',
                             '${column.id}',
-                            this.checked
+                            this.value
                         )
                     "
                 >
@@ -682,7 +710,7 @@ function renderCell(row, column) {
         `;
     }
 
-
+    // TEXT
     return `
         <td>
 
@@ -917,85 +945,62 @@ async function renameTracker() {
 // ============================================================
 
 async function addColumn() {
-
-    const tracker =
-        getActiveTracker();
+    const tracker = getActiveTracker();
 
     if (!tracker) return;
 
+    const name = prompt("Enter column name:");
 
-    const name =
-        prompt(
-            "Enter column name:"
-        );
-
-
-    if (
-        name === null ||
-        !name.trim()
-    ) {
+    if (name === null || !name.trim()) {
         return;
     }
 
-
-    const type =
-        prompt(
-            "Column type:\n\n1 = Text\n2 = Checkbox",
-            "1"
-        );
-
+    const typeChoice = prompt(
+        "Column type:\n\n1 = Text\n2 = Checkbox\n3 = Date",
+        "1"
+    );
 
     if (
-        type !== "1" &&
-        type !== "2"
+        typeChoice !== "1" &&
+        typeChoice !== "2" &&
+        typeChoice !== "3"
     ) {
         return;
     }
-
 
     const column = {
-
         id: generateId(),
-
-        name:
-            name.trim(),
-
+        name: name.trim(),
         type:
-            type === "2"
+            typeChoice === "2"
                 ? "checkbox"
-                : "text"
+                : typeChoice === "3"
+                    ? "date"
+                    : "text"
     };
-
 
     tracker.columns.push(column);
 
-
+    // Give existing rows a default value
     tracker.rows.forEach(row => {
-
         row.cells[column.id] =
             column.type === "checkbox"
                 ? false
                 : "";
     });
 
-
     render();
 
-
     try {
+        await saveTrackerToFirestore(tracker);
 
-        await saveTracker(tracker);
-
-        showToast(
-            "Column added"
-        );
+        showToast("Column added");
 
     } catch (error) {
 
         tracker.columns =
             tracker.columns.filter(
-                item =>
-                    item.id !== column.id
+                item => item.id !== column.id
             );
 
         tracker.rows.forEach(row => {
@@ -1005,7 +1010,6 @@ async function addColumn() {
         render();
     }
 }
-
 
 async function renameColumn(columnId) {
 
