@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Tracker</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-icon">✓</span>
+            <span>Tracker</span>
+        </div>
+
+        <div class="topbar-actions">
+            <button id="themeToggle" class="icon-button" onclick="toggleTheme()">
+                ☾
+            </button>
+
+            <button class="secondary-button" onclick="exportJSON()">
+                Export JSON
+            </button>
+
+            <label class="secondary-button import-button">
+                Import JSON
+                <input
+                    type="file"
+                    id="importFile"
+                    accept=".json"
+                    onchange="importJSON(event)"
+                    hidden
+                >
+            </label>
+        </div>
+    </header>
+
+
+    <!-- BODY -->
+    <div class="app-body">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+
+            <div class="sidebar-header">
+                <div>
+                    <div class="sidebar-title">Trackers</div>
+                    <div class="sidebar-subtitle">
+                        Manage your trackers
+                    </div>
+                </div>
+
+                <button
+                    class="add-tracker-button"
+                    onclick="addTracker()"
+                    title="Add tracker"
+                >
+                    +
+                </button>
+            </div>
+
+            <div id="trackerList" class="tracker-list"></div>
+
+        </aside>
+
+
+        <!-- MAIN -->
+        <main class="main-content">
+
+            <div id="mainContent"></div>
+
+        </main>
+
+    </div>
+
+</div>
+
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+
+<!-- IMPORTANT:
+     script.js is now an ES module
+-->
+<script type="module" src="script.js"></script>
+
+</body>
+</html>
