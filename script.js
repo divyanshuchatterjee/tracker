@@ -498,9 +498,8 @@ function renderMain() {
 
         </div>
 
-        <div class="table-wrapper">
-
-            <table>
+      <div class="table-wrapper">
+    <table class="tracker-table">
 
                 <thead>
                     <tr>
