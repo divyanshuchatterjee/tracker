@@ -567,41 +567,46 @@ function renderMain() {
 function renderHeader(column) {
     return `
         <th>
-
             <div class="column-header">
 
                 <span>
                     ${escapeHTML(column.name)}
                 </span>
 
-                <button
-                    class="column-menu-button"
-                    onclick="toggleColumnMenu('${column.id}')"
-                >
-                    ⋮
-                </button>
-
-                <div
-                    id="column-menu-${column.id}"
-                    class="column-menu"
-                >
+                <div class="column-menu-wrapper">
 
                     <button
-                        onclick="renameColumn('${column.id}')"
+                        type="button"
+                        class="column-menu-button"
+                        onclick="event.stopPropagation(); toggleColumnMenu('${column.id}')"
+                        title="Column options"
                     >
-                        Rename
+                        ⋮
                     </button>
 
-                    <button
-                        onclick="deleteColumn('${column.id}')"
+                    <div
+                        id="column-menu-${column.id}"
+                        class="column-menu"
+                        onclick="event.stopPropagation()"
                     >
-                        Delete
-                    </button>
+                        <button
+                            type="button"
+                            onclick="renameColumn('${column.id}')"
+                        >
+                            Rename
+                        </button>
+
+                        <button
+                            type="button"
+                            onclick="deleteColumn('${column.id}')"
+                        >
+                            Delete
+                        </button>
+                    </div>
 
                 </div>
 
             </div>
-
         </th>
     `;
 }
