@@ -71,6 +71,54 @@ body.dark-mode {
         0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
+/* ============================================================
+   CLICKABLE URLS
+   ============================================================ */
+
+.text-cell {
+    min-width: 140px;
+}
+
+.cell-display {
+    min-height: 32px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 7px 8px;
+
+    border: 1px solid transparent;
+    border-radius: 6px;
+
+    color: var(--text);
+
+    font-size: 13px;
+
+    cursor: text;
+
+    transition:
+        background var(--transition),
+        border-color var(--transition);
+}
+
+.cell-display:hover {
+    background: var(--surface);
+    border-color: var(--border);
+}
+
+.cell-link {
+    color: var(--primary);
+
+    text-decoration: none;
+
+    cursor: pointer;
+
+    word-break: break-all;
+}
+
+.cell-link:hover {
+    text-decoration: underline;
+}
 
 /* ============================================================
    RESET
