@@ -678,12 +678,11 @@ function renderMain() {
                         >
 
                             <button
-                                class="add-column-button"
-                                onclick="addColumn()"
-                                title="Add column"
-                            >
-                                +
-                            </button>
+    class="add-column-button"
+    onclick="addColumn()"
+>
+    + Add Column
+</button>
 
                         </th>
 
