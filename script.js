@@ -656,7 +656,10 @@ function renderCell(row, column) {
     const value =
         row.cells?.[column.id] ?? "";
 
+    // ============================================================
     // CHECKBOX
+    // ============================================================
+
     if (column.type === "checkbox") {
 
         const checked =
@@ -687,7 +690,11 @@ function renderCell(row, column) {
         `;
     }
 
+
+    // ============================================================
     // DATE
+    // ============================================================
+
     if (column.type === "date") {
 
         return `
@@ -710,7 +717,11 @@ function renderCell(row, column) {
         `;
     }
 
+
+    // ============================================================
     // TEXT
+    // ============================================================
+
     return `
         <td>
 
@@ -992,11 +1003,16 @@ async function addColumn() {
     render();
 
     try {
-        await saveTrackerToFirestore(tracker);
+        await saveTracker(tracker);
 
         showToast("Column added");
 
     } catch (error) {
+
+        console.error(
+            "Failed to add column:",
+            error
+        );
 
         tracker.columns =
             tracker.columns.filter(
@@ -1008,6 +1024,11 @@ async function addColumn() {
         });
 
         render();
+
+        showToast(
+            "Failed to add column",
+            "error"
+        );
     }
 }
 
