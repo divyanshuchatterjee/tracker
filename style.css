@@ -1025,6 +1025,37 @@ body:not(.dark-mode) .cell-input[type="date"] {
     transform: translateY(1px);
 }
 
+.add-column-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 10px 18px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: var(--primary);
+    color: #ffffff;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background var(--transition),
+        transform var(--transition);
+}
+
+.add-column-button:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+}
+
+.add-column-button:active {
+    transform: translateY(0);
+}
 /* ============================================================
    ADD ROW
    ============================================================ */
