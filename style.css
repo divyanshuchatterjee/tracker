@@ -36,6 +36,74 @@
     --transition: 0.18s ease;
 }
 
+/* ============================================================
+   TEXT CELLS
+   ============================================================ */
+
+.text-cell {
+    min-width: 180px;
+}
+
+.text-cell-wrapper {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+}
+
+
+/* Make room for the link button */
+.text-cell-wrapper .cell-input {
+    width: 100%;
+    padding-right: 40px;
+}
+
+
+/* ============================================================
+   URL BUTTON
+   ============================================================ */
+
+.cell-link-button {
+    position: absolute;
+
+    right: 7px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    width: 26px;
+    height: 26px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 5px;
+
+    background: var(--primary);
+    color: #ffffff;
+
+    text-decoration: none;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background var(--transition),
+        transform var(--transition);
+}
+
+.cell-link-button:hover {
+    background: var(--primary-hover);
+
+    transform:
+        translateY(-50%)
+        scale(1.05);
+}
 
 /* ============================================================
    DARK THEME — INTELLIJ / DARCULA INSPIRED
