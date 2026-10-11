@@ -650,6 +650,47 @@ function renderRow(row) {
 // CELL
 // ============================================================
 
+function linkifyText(text) {
+    if (!text) return "";
+
+    const urlRegex =
+        /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/gi;
+
+    let result = "";
+    let lastIndex = 0;
+
+    text.replace(urlRegex, (url, offset) => {
+        // Text before the URL
+        result += escapeHTML(
+            text.substring(lastIndex, offset)
+        );
+
+        // Clickable URL
+        result += `
+            <a
+                href="${escapeAttribute(url)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="cell-link"
+                onclick="event.stopPropagation()"
+            >
+                ${escapeHTML(url)}
+            </a>
+        `;
+
+        lastIndex = offset + url.length;
+
+        return url;
+    });
+
+    // Remaining text after the last URL
+    result += escapeHTML(
+        text.substring(lastIndex)
+    );
+
+    return result;
+}
+
 function renderCell(row, column) {
 
     const value =
@@ -721,24 +762,74 @@ function renderCell(row, column) {
     // TEXT
     // ============================================================
 
-    return `
-        <td>
+   return `
+    <td class="text-cell">
 
-            <input
-                class="cell-input"
-                type="text"
-                value="${escapeAttribute(value)}"
-                onchange="
-                    updateCell(
-                        '${row.id}',
-                        '${column.id}',
-                        this.value
-                    )
-                "
-            >
+        <div
+            class="cell-display"
+            ondblclick="
+                startCellEdit(
+                    '${row.id}',
+                    '${column.id}'
+                )
+            "
+            title="Double-click to edit"
+        >
+            ${linkifyText(value)}
+        </div>
 
-        </td>
+    </td>
+`;
+}
+
+function startCellEdit(rowId, columnId) {
+
+    const row =
+        getActiveTracker()?.rows.find(
+            r => r.id === rowId
+        );
+
+    if (!row) return;
+
+    const value =
+        row.cells?.[columnId] ?? "";
+
+    const cell =
+        event.currentTarget;
+
+    cell.innerHTML = `
+        <input
+            class="cell-input"
+            type="text"
+            value="${escapeAttribute(value)}"
+            autofocus
+            onblur="
+                updateCell(
+                    '${rowId}',
+                    '${columnId}',
+                    this.value
+                );
+                render();
+            "
+            onkeydown="
+                if (event.key === 'Enter') {
+                    this.blur();
+                }
+
+                if (event.key === 'Escape') {
+                    render();
+                }
+            "
+        >
     `;
+
+    const input =
+        cell.querySelector("input");
+
+    if (input) {
+        input.focus();
+        input.select();
+    }
 }
 
 
