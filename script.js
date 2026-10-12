@@ -392,9 +392,7 @@ function renderTrackerList() {
 
 function renderMain() {
     const container =
-        document.getElementById(
-            "mainContent"
-        );
+        document.getElementById("mainContent");
 
     if (!container) return;
 
@@ -402,91 +400,109 @@ function renderMain() {
         getActiveTracker();
 
     if (!tracker) {
-        container.innerHTML = "";
+        container.innerHTML = `
+            <div class="empty-state">
+                <h2>No tracker selected</h2>
+            </div>
+        `;
+
         return;
     }
 
     container.innerHTML = `
         <div class="tracker-header">
 
-            <div class="tracker-title-area">
+            <div class="tracker-title-row">
 
                 <h1>
-                    ${escapeHTML(
-                        tracker.name
-                    )}
+                    ${escapeHTML(tracker.name)}
                 </h1>
 
-                <div class="tracker-actions">
+                <button
+                    class="icon-button small"
+                    onclick="renameTracker()"
+                    title="Rename tracker"
+                >
+                    ✎
+                </button>
 
-                    <button
-                        class="secondary-button"
-                        onclick="renameTracker()"
+            </div>
+
+
+            <div class="tracker-actions">
+
+                <button
+                    class="secondary-button"
+                    onclick="exportCurrentTracker()"
+                    title="Export this tracker only"
+                >
+                    Export Sheet
+                </button>
+
+
+                <label
+                    class="secondary-button import-button"
+                    title="Import a tracker as a new sheet"
+                >
+                    Import Sheet
+
+                    <input
+                        type="file"
+                        accept=".json,application/json"
+                        onchange="importCurrentTracker(event)"
+                        hidden
                     >
-                        Rename
-                    </button>
+                </label>
 
-                    <button
-                        class="secondary-button"
-                        onclick="duplicateTracker()"
-                    >
-                        Duplicate
-                    </button>
 
-                    <button
-                        class="secondary-button"
-                        onclick="exportCurrentTracker()"
-                    >
-                        Export Sheet
-                    </button>
+                <button
+                    class="secondary-button"
+                    onclick="duplicateTracker()"
+                >
+                    Duplicate
+                </button>
 
-                    <label class="secondary-button import-button">
-                        Import Sheet
 
-                        <input
-                            type="file"
-                            accept=".json,application/json"
-                            hidden
-                            onchange="importSheetJSON(event)"
-                        >
-                    </label>
-
-                    <button
-                        class="danger-button"
-                        onclick="deleteTracker()"
-                    >
-                        Delete
-                    </button>
-
-                </div>
+                <button
+                    class="danger-button"
+                    onclick="deleteTracker()"
+                >
+                    Delete
+                </button>
 
             </div>
 
         </div>
+
 
         <div class="table-wrapper">
 
             <table class="tracker-table">
 
                 <thead>
+
                     <tr>
 
                         ${tracker.columns
-                            .map(
-                                column =>
-                                    renderColumnHeader(
-                                        tracker,
-                                        column
-                                    )
-                            )
+                            .map(renderHeader)
                             .join("")}
 
                         <th class="row-actions-header">
-                            Actions
+
+                            <button
+                                class="add-column-button"
+                                onclick="addColumn()"
+                                title="Add column"
+                            >
+                                +
+                            </button>
+
                         </th>
 
                     </tr>
+
                 </thead>
+
 
                 <tbody>
 
@@ -494,24 +510,21 @@ function renderMain() {
                         tracker.rows.length === 0
                             ? `
                                 <tr>
+
                                     <td
                                         colspan="${
-                                            tracker.columns.length +
-                                            1
+                                            tracker.columns.length + 1
                                         }"
-                                        class="empty-state"
+                                        class="empty-row"
                                     >
                                         No rows yet.
                                     </td>
+
                                 </tr>
-                            `
-                            : tracker.rows
-                                .map(row =>
-                                    renderRow(
-                                        tracker,
-                                        row
-                                    )
-                                )
+                              `
+                            :
+                              tracker.rows
+                                .map(renderRow)
                                 .join("")
                     }
 
@@ -521,23 +534,13 @@ function renderMain() {
 
         </div>
 
-        <div class="table-footer">
 
-            <button
-                class="primary-button"
-                onclick="addRow()"
-            >
-                + Add Row
-            </button>
-
-            <button
-                class="secondary-button"
-                onclick="addColumn()"
-            >
-                + Add Column
-            </button>
-
-        </div>
+        <button
+            class="add-row-button"
+            onclick="addRow()"
+        >
+            + Add Row
+        </button>
     `;
 }
 
