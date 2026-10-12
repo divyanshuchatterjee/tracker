@@ -484,8 +484,8 @@ function renderMain() {
                     <tr>
 
                         ${tracker.columns
-                            .map(renderHeader)
-                            .join("")}
+    .map(column => renderColumnHeader(tracker, column))
+    .join("")}
 
                         <th class="row-actions-header">
 
@@ -524,8 +524,8 @@ function renderMain() {
                               `
                             :
                               tracker.rows
-                                .map(renderRow)
-                                .join("")
+    .map(row => renderRow(tracker, row))
+    .join("")
                     }
 
                 </tbody>
@@ -554,14 +554,12 @@ function renderColumnHeader(
     column
 ) {
     return `
-        <th class="column-header">
+        <th>
 
-            <div class="column-header-content">
+            <div class="column-header">
 
                 <span>
-                    ${escapeHTML(
-                        column.name
-                    )}
+                    ${escapeHTML(column.name)}
                 </span>
 
                 <button
