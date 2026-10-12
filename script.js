@@ -213,7 +213,7 @@ function initializeTheme() {
         localStorage.getItem("trackerTheme");
 
     if (savedTheme === "dark") {
-        document.body.classList.add("dark-theme");
+        document.body.classList.add("dark-mode");
     }
 
     updateThemeButton();
@@ -222,7 +222,7 @@ function initializeTheme() {
 
 function toggleTheme() {
     const isDark =
-        document.body.classList.toggle("dark-theme");
+        document.body.classList.toggle("dark-mode");
 
     localStorage.setItem(
         "theme",
@@ -240,7 +240,7 @@ function updateThemeButton() {
     if (!button) return;
 
     button.textContent =
-        document.body.classList.contains("dark-theme")
+        document.body.classList.contains("dark-mode")
             ? "☀"
             : "☾";
 }
