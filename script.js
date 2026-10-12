@@ -2,9 +2,7 @@
 // FIREBASE IMPORTS
 // ============================================================
 
-import {
-    initializeApp
-} from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 
 import {
     getFirestore,
@@ -20,9 +18,7 @@ import {
     signInAnonymously
 } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
 
-import {
-    firebaseConfig
-} from "./firebase-config.js";
+import { firebaseConfig } from "./firebase-config.js";
 
 
 // ============================================================
@@ -30,13 +26,9 @@ import {
 // ============================================================
 
 const app = initializeApp(firebaseConfig);
-
 const db = getFirestore(app);
-
 const auth = getAuth(app);
-
-const trackersCollection =
-    collection(db, "trackers");
+const trackersCollection = collection(db, "trackers");
 
 
 // ============================================================
@@ -57,9 +49,7 @@ let activeTrackerId = null;
 function generateId() {
     return (
         Date.now().toString(36) +
-        Math.random()
-            .toString(36)
-            .substring(2, 9)
+        Math.random().toString(36).substring(2, 9)
     );
 }
 
@@ -81,26 +71,61 @@ function escapeAttribute(value) {
 
 function getActiveTracker() {
     return data.trackers.find(
-        tracker =>
-            tracker.id === activeTrackerId
+        tracker => tracker.id === activeTrackerId
     );
 }
 
 
-function showToast(
-    message,
-    type = "success"
-) {
-    const toast =
-        document.getElementById("toast");
+function clone(value) {
+    return JSON.parse(JSON.stringify(value));
+}
+
+
+function sanitizeFileName(name) {
+    return String(name || "tracker")
+        .replace(/[<>:"/\\|?*\x00-\x1F]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .substring(0, 100) || "tracker";
+}
+
+
+function uniqueTrackerName(baseName) {
+    const existingNames = new Set(
+        data.trackers.map(tracker =>
+            String(tracker.name || "").trim().toLowerCase()
+        )
+    );
+
+    const cleanBase =
+        String(baseName || "Imported Tracker").trim() ||
+        "Imported Tracker";
+
+    if (!existingNames.has(cleanBase.toLowerCase())) {
+        return cleanBase;
+    }
+
+    let index = 2;
+
+    while (
+        existingNames.has(
+            `${cleanBase} ${index}`.toLowerCase()
+        )
+    ) {
+        index++;
+    }
+
+    return `${cleanBase} ${index}`;
+}
+
+
+function showToast(message, type = "success") {
+    const toast = document.getElementById("toast");
 
     if (!toast) return;
 
     toast.textContent = message;
-
-    toast.className =
-        `toast ${type}`;
-
+    toast.className = `toast ${type}`;
     toast.classList.add("show");
 
     setTimeout(() => {
@@ -109,56 +134,115 @@ function showToast(
 }
 
 
+function downloadJSON(json, filename) {
+    const blob = new Blob(
+        [json],
+        { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => {
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
+
+function normalizeTracker(tracker) {
+    if (!tracker || typeof tracker !== "object") {
+        throw new Error("Invalid tracker");
+    }
+
+    const columns = Array.isArray(tracker.columns)
+        ? tracker.columns
+        : [];
+
+    if (columns.length === 0) {
+        throw new Error("Tracker must contain columns");
+    }
+
+    const normalizedColumns = columns.map(column => ({
+        id: String(column.id || generateId()),
+        name: String(column.name || "Column"),
+        type:
+            column.type === "checkbox"
+                ? "checkbox"
+                : column.type === "date"
+                    ? "date"
+                    : "text"
+    }));
+
+    const rows = Array.isArray(tracker.rows)
+        ? tracker.rows
+        : [];
+
+    const normalizedRows = rows.map(row => ({
+        id: String(row.id || generateId()),
+        cells:
+            row.cells && typeof row.cells === "object"
+                ? { ...row.cells }
+                : {}
+    }));
+
+    return {
+        id: String(tracker.id || generateId()),
+        name:
+            String(tracker.name || "My Tracker").trim() ||
+            "My Tracker",
+        columns: normalizedColumns,
+        rows: normalizedRows
+    };
+}
+
+
 // ============================================================
 // THEME
 // ============================================================
 
-function toggleTheme() {
-    const body =
-        document.body;
+function initializeTheme() {
+    const savedTheme =
+        localStorage.getItem("theme") ||
+        localStorage.getItem("trackerTheme");
 
+    if (savedTheme === "dark") {
+        document.body.classList.add("dark-theme");
+    }
+
+    updateThemeButton();
+}
+
+
+function toggleTheme() {
     const isDark =
-        body.classList.toggle(
-            "dark-theme"
-        );
+        document.body.classList.toggle("dark-theme");
 
     localStorage.setItem(
         "theme",
         isDark ? "dark" : "light"
     );
 
-    const button =
-        document.getElementById(
-            "themeToggle"
-        );
-
-    if (button) {
-        button.textContent =
-            isDark ? "☀" : "☾";
-    }
+    updateThemeButton();
 }
 
 
-function initializeTheme() {
-    const savedTheme =
-        localStorage.getItem(
-            "theme"
-        );
+function updateThemeButton() {
+    const button =
+        document.getElementById("themeToggle");
 
-    if (savedTheme === "dark") {
-        document.body.classList.add(
-            "dark-theme"
-        );
+    if (!button) return;
 
-        const button =
-            document.getElementById(
-                "themeToggle"
-            );
-
-        if (button) {
-            button.textContent = "☀";
-        }
-    }
+    button.textContent =
+        document.body.classList.contains("dark-theme")
+            ? "☀"
+            : "☾";
 }
 
 
@@ -167,20 +251,14 @@ function initializeTheme() {
 // ============================================================
 
 function createDefaultTracker() {
-    const trackerId =
-        generateId();
-
-    const columnId =
-        generateId();
-
     return {
-        id: trackerId,
+        id: generateId(),
 
         name: "My Tracker",
 
         columns: [
             {
-                id: columnId,
+                id: generateId(),
                 name: "Task",
                 type: "text"
             }
@@ -207,9 +285,7 @@ async function saveTracker(tracker) {
 }
 
 
-async function removeTracker(
-    trackerId
-) {
+async function removeTracker(trackerId) {
     await deleteDoc(
         doc(
             db,
@@ -222,69 +298,53 @@ async function removeTracker(
 
 async function loadTrackers() {
     const snapshot =
-        await getDocs(
-            trackersCollection
-        );
+        await getDocs(trackersCollection);
 
     data.trackers =
-        snapshot.docs.map(
-            snapshotDoc => ({
-                id: snapshotDoc.id,
-                ...snapshotDoc.data()
-            })
-        );
+        snapshot.docs.map(snapshotDoc => ({
+            id: snapshotDoc.id,
+            ...snapshotDoc.data()
+        }));
 }
 
 
 // ============================================================
-// INITIALIZE
+// INITIALIZATION
 // ============================================================
 
 async function initialize() {
+    initializeTheme();
+
     try {
-        initializeTheme();
-
-        await signInAnonymously(
-            auth
-        );
-
+        await signInAnonymously(auth);
         await loadTrackers();
 
         /*
-         * If Firestore is empty, try to recover
-         * data from old localStorage backup.
+         * Recover old localStorage data if Firestore
+         * is completely empty.
          */
-        if (
-            data.trackers.length === 0
-        ) {
+        if (data.trackers.length === 0) {
             const localData =
-                localStorage.getItem(
-                    "trackerData"
-                );
+                localStorage.getItem("trackerData");
 
             if (localData) {
                 try {
                     const parsed =
-                        JSON.parse(
-                            localData
-                        );
+                        JSON.parse(localData);
 
                     if (
                         parsed &&
-                        Array.isArray(
-                            parsed.trackers
-                        )
+                        Array.isArray(parsed.trackers)
                     ) {
-                        data =
-                            parsed;
+                        data.trackers =
+                            parsed.trackers.map(
+                                normalizeTracker
+                            );
 
                         for (
-                            const tracker
-                            of data.trackers
+                            const tracker of data.trackers
                         ) {
-                            await saveTracker(
-                                tracker
-                            );
+                            await saveTracker(tracker);
                         }
                     }
                 } catch (error) {
@@ -297,22 +357,15 @@ async function initialize() {
         }
 
         /*
-         * Create default tracker if
-         * absolutely nothing exists.
+         * Create a default tracker if nothing exists.
          */
-        if (
-            data.trackers.length === 0
-        ) {
+        if (data.trackers.length === 0) {
             const tracker =
                 createDefaultTracker();
 
-            data.trackers.push(
-                tracker
-            );
+            data.trackers.push(tracker);
 
-            await saveTracker(
-                tracker
-            );
+            await saveTracker(tracker);
         }
 
         activeTrackerId =
@@ -326,8 +379,48 @@ async function initialize() {
             error
         );
 
+        /*
+         * Fallback to localStorage when Firebase
+         * cannot be reached.
+         */
+        const savedData =
+            localStorage.getItem("trackerData");
+
+        if (savedData) {
+            try {
+                const parsed =
+                    JSON.parse(savedData);
+
+                if (
+                    parsed &&
+                    Array.isArray(parsed.trackers)
+                ) {
+                    data.trackers =
+                        parsed.trackers.map(
+                            normalizeTracker
+                        );
+                }
+            } catch (localError) {
+                console.error(
+                    "Local data recovery failed:",
+                    localError
+                );
+            }
+        }
+
+        if (data.trackers.length === 0) {
+            data.trackers = [
+                createDefaultTracker()
+            ];
+        }
+
+        activeTrackerId =
+            data.trackers[0].id;
+
+        render();
+
         showToast(
-            "Failed to load tracker",
+            "Using local data because Firebase could not be reached",
             "error"
         );
     }
@@ -340,44 +433,31 @@ async function initialize() {
 
 function render() {
     renderTrackerList();
-
     renderMain();
 }
 
 
-// ============================================================
-// TRACKER LIST
-// ============================================================
-
 function renderTrackerList() {
     const container =
-        document.getElementById(
-            "trackerList"
-        );
+        document.getElementById("trackerList");
 
     if (!container) return;
 
     container.innerHTML =
         data.trackers
             .map(tracker => {
-
                 const active =
-                    tracker.id ===
-                    activeTrackerId;
+                    tracker.id === activeTrackerId;
 
                 return `
                     <div
                         class="tracker-item ${
-                            active
-                                ? "active"
-                                : ""
+                            active ? "active" : ""
                         }"
                         onclick="selectTracker('${tracker.id}')"
                     >
                         <span class="tracker-item-name">
-                            ${escapeHTML(
-                                tracker.name
-                            )}
+                            ${escapeHTML(tracker.name)}
                         </span>
                     </div>
                 `;
@@ -405,7 +485,6 @@ function renderMain() {
                 <h2>No tracker selected</h2>
             </div>
         `;
-
         return;
     }
 
@@ -428,7 +507,6 @@ function renderMain() {
 
             </div>
 
-
             <div class="tracker-actions">
 
                 <button
@@ -438,7 +516,6 @@ function renderMain() {
                 >
                     Export Sheet
                 </button>
-
 
                 <label
                     class="secondary-button import-button"
@@ -454,14 +531,12 @@ function renderMain() {
                     >
                 </label>
 
-
                 <button
                     class="secondary-button"
                     onclick="duplicateTracker()"
                 >
                     Duplicate
                 </button>
-
 
                 <button
                     class="danger-button"
@@ -484,8 +559,13 @@ function renderMain() {
                     <tr>
 
                         ${tracker.columns
-    .map(column => renderColumnHeader(tracker, column))
-    .join("")}
+                            .map(column =>
+                                renderColumnHeader(
+                                    tracker,
+                                    column
+                                )
+                            )
+                            .join("")}
 
                         <th class="row-actions-header">
 
@@ -508,9 +588,9 @@ function renderMain() {
 
                     ${
                         tracker.rows.length === 0
+
                             ? `
                                 <tr>
-
                                     <td
                                         colspan="${
                                             tracker.columns.length + 1
@@ -519,13 +599,19 @@ function renderMain() {
                                     >
                                         No rows yet.
                                     </td>
-
                                 </tr>
-                              `
+                            `
+
                             :
-                              tracker.rows
-    .map(row => renderRow(tracker, row))
-    .join("")
+
+                            tracker.rows
+                                .map(row =>
+                                    renderRow(
+                                        tracker,
+                                        row
+                                    )
+                                )
+                                .join("")
                     }
 
                 </tbody>
@@ -564,7 +650,11 @@ function renderColumnHeader(
 
                 <button
                     class="column-menu-button"
-                    onclick="event.stopPropagation(); toggleColumnMenu('${column.id}')"
+                    onclick="
+                        event.stopPropagation();
+                        toggleColumnMenu('${column.id}')
+                    "
+                    title="Column options"
                 >
                     ⋮
                 </button>
@@ -575,13 +665,19 @@ function renderColumnHeader(
                 >
 
                     <button
-                        onclick="renameColumn('${column.id}')"
+                        onclick="
+                            event.stopPropagation();
+                            renameColumn('${column.id}')
+                        "
                     >
                         Rename
                     </button>
 
                     <button
-                        onclick="deleteColumn('${column.id}')"
+                        onclick="
+                            event.stopPropagation();
+                            deleteColumn('${column.id}')
+                        "
                     >
                         Delete
                     </button>
@@ -607,13 +703,12 @@ function renderRow(
         <tr>
 
             ${tracker.columns
-                .map(
-                    column =>
-                        renderCell(
-                            tracker,
-                            row,
-                            column
-                        )
+                .map(column =>
+                    renderCell(
+                        tracker,
+                        row,
+                        column
+                    )
                 )
                 .join("")}
 
@@ -649,10 +744,7 @@ function renderCell(
     /*
      * CHECKBOX
      */
-    if (
-        column.type ===
-        "checkbox"
-    ) {
+    if (column.type === "checkbox") {
         return `
             <td class="checkbox-cell">
 
@@ -680,9 +772,7 @@ function renderCell(
     /*
      * DATE
      */
-    if (
-        column.type === "date"
-    ) {
+    if (column.type === "date") {
         return `
             <td>
 
@@ -716,9 +806,7 @@ function renderCell(
         /https?:\/\/[^\s<>"']+/i;
 
     const urlMatch =
-        stringValue.match(
-            urlRegex
-        );
+        stringValue.match(urlRegex);
 
     const detectedUrl =
         urlMatch
@@ -776,18 +864,14 @@ function renderCell(
 
 
 // ============================================================
-// UPDATE LINK BUTTON WHILE TYPING
+// URL BUTTON
 // ============================================================
 
-function updateCellLinkButton(
-    input
-) {
+function updateCellLinkButton(input) {
     if (!input) return;
 
     const wrapper =
-        input.closest(
-            ".text-cell-wrapper"
-        );
+        input.closest(".text-cell-wrapper");
 
     if (!wrapper) return;
 
@@ -808,18 +892,11 @@ function updateCellLinkButton(
         value.match(urlRegex);
 
     if (match) {
-        link.href =
-            match[0];
-
-        link.style.display =
-            "inline-flex";
+        link.href = match[0];
+        link.style.display = "inline-flex";
     } else {
-        link.removeAttribute(
-            "href"
-        );
-
-        link.style.display =
-            "none";
+        link.removeAttribute("href");
+        link.style.display = "none";
     }
 }
 
@@ -830,11 +907,12 @@ function updateCellLinkButton(
 
 async function addTracker() {
     const name =
-        prompt(
-            "Enter tracker name:"
-        );
+        prompt("Enter tracker name:");
 
-    if (!name || !name.trim()) {
+    if (
+        name === null ||
+        !name.trim()
+    ) {
         return;
     }
 
@@ -854,23 +932,15 @@ async function addTracker() {
         rows: []
     };
 
-    data.trackers.push(
-        tracker
-    );
-
-    activeTrackerId =
-        tracker.id;
+    data.trackers.push(tracker);
+    activeTrackerId = tracker.id;
 
     render();
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
-        showToast(
-            "Tracker created"
-        );
+        showToast("Tracker created");
 
     } catch (error) {
         console.error(error);
@@ -878,9 +948,11 @@ async function addTracker() {
         data.trackers =
             data.trackers.filter(
                 item =>
-                    item.id !==
-                    tracker.id
+                    item.id !== tracker.id
             );
+
+        activeTrackerId =
+            data.trackers[0]?.id || null;
 
         render();
 
@@ -902,19 +974,16 @@ async function deleteTracker() {
 
     if (!tracker) return;
 
-    if (
-        !confirm(
-            `Delete "${tracker.name}"?`
-        )
-    ) {
+    if (!confirm(
+        `Delete "${tracker.name}"?`
+    )) {
         return;
     }
 
     const trackerIndex =
         data.trackers.findIndex(
             item =>
-                item.id ===
-                tracker.id
+                item.id === tracker.id
         );
 
     data.trackers.splice(
@@ -922,13 +991,29 @@ async function deleteTracker() {
         1
     );
 
-    await removeTracker(
-        tracker.id
-    );
+    try {
+        await removeTracker(
+            tracker.id
+        );
 
-    if (
-        data.trackers.length === 0
-    ) {
+    } catch (error) {
+        data.trackers.splice(
+            trackerIndex,
+            0,
+            tracker
+        );
+
+        render();
+
+        showToast(
+            "Failed to delete tracker",
+            "error"
+        );
+
+        return;
+    }
+
+    if (data.trackers.length === 0) {
         const newTracker =
             createDefaultTracker();
 
@@ -942,16 +1027,20 @@ async function deleteTracker() {
         await saveTracker(
             newTracker
         );
+
     } else {
         activeTrackerId =
-            data.trackers[0].id;
+            data.trackers[
+                Math.max(
+                    0,
+                    trackerIndex - 1
+                )
+            ].id;
     }
 
     render();
 
-    showToast(
-        "Tracker deleted"
-    );
+    showToast("Tracker deleted");
 }
 
 
@@ -959,11 +1048,17 @@ async function deleteTracker() {
 // SELECT TRACKER
 // ============================================================
 
-function selectTracker(
-    trackerId
-) {
-    activeTrackerId =
-        trackerId;
+function selectTracker(trackerId) {
+    if (
+        !data.trackers.some(
+            tracker =>
+                tracker.id === trackerId
+        )
+    ) {
+        return;
+    }
+
+    activeTrackerId = trackerId;
 
     render();
 }
@@ -986,7 +1081,7 @@ async function renameTracker() {
         );
 
     if (
-        !newName ||
+        newName === null ||
         !newName.trim()
     ) {
         return;
@@ -1001,13 +1096,9 @@ async function renameTracker() {
     render();
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
-        showToast(
-            "Tracker renamed"
-        );
+        showToast("Tracker renamed");
 
     } catch (error) {
         tracker.name =
@@ -1034,12 +1125,10 @@ async function addColumn() {
     if (!tracker) return;
 
     const name =
-        prompt(
-            "Enter column name:"
-        );
+        prompt("Enter column name:");
 
     if (
-        !name ||
+        name === null ||
         !name.trim()
     ) {
         return;
@@ -1051,15 +1140,20 @@ async function addColumn() {
             "1"
         );
 
-    let type = "text";
-
-    if (typeInput === "2") {
-        type = "checkbox";
+    if (
+        typeInput !== "1" &&
+        typeInput !== "2" &&
+        typeInput !== "3"
+    ) {
+        return;
     }
 
-    if (typeInput === "3") {
-        type = "date";
-    }
+    const type =
+        typeInput === "2"
+            ? "checkbox"
+            : typeInput === "3"
+                ? "date"
+                : "text";
 
     const column = {
         id: generateId(),
@@ -1067,47 +1161,32 @@ async function addColumn() {
         type
     };
 
-    tracker.columns.push(
-        column
-    );
+    tracker.columns.push(column);
 
-    tracker.rows.forEach(
-        row => {
-            row.cells[column.id] =
-                type === "checkbox"
-                    ? false
-                    : "";
-        }
-    );
+    tracker.rows.forEach(row => {
+        row.cells[column.id] =
+            type === "checkbox"
+                ? false
+                : "";
+    });
 
     render();
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
-        showToast(
-            "Column added"
-        );
+        showToast("Column added");
 
     } catch (error) {
-        console.error(error);
-
         tracker.columns =
             tracker.columns.filter(
                 item =>
-                    item.id !==
-                    column.id
+                    item.id !== column.id
             );
 
-        tracker.rows.forEach(
-            row => {
-                delete row.cells[
-                    column.id
-                ];
-            }
-        );
+        tracker.rows.forEach(row => {
+            delete row.cells[column.id];
+        });
 
         render();
 
@@ -1123,9 +1202,7 @@ async function addColumn() {
 // RENAME COLUMN
 // ============================================================
 
-async function renameColumn(
-    columnId
-) {
+async function renameColumn(columnId) {
     const tracker =
         getActiveTracker();
 
@@ -1134,8 +1211,7 @@ async function renameColumn(
     const column =
         tracker.columns.find(
             item =>
-                item.id ===
-                columnId
+                item.id === columnId
         );
 
     if (!column) return;
@@ -1147,7 +1223,7 @@ async function renameColumn(
         );
 
     if (
-        !newName ||
+        newName === null ||
         !newName.trim()
     ) {
         return;
@@ -1162,13 +1238,9 @@ async function renameColumn(
     render();
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
-        showToast(
-            "Column renamed"
-        );
+        showToast("Column renamed");
 
     } catch (error) {
         column.name =
@@ -1188,9 +1260,7 @@ async function renameColumn(
 // DELETE COLUMN
 // ============================================================
 
-async function deleteColumn(
-    columnId
-) {
+async function deleteColumn(columnId) {
     const tracker =
         getActiveTracker();
 
@@ -1210,53 +1280,62 @@ async function deleteColumn(
     const column =
         tracker.columns.find(
             item =>
-                item.id ===
-                columnId
+                item.id === columnId
         );
 
     if (!column) return;
 
-    if (
-        !confirm(
-            `Delete column "${column.name}"?`
-        )
-    ) {
+    if (!confirm(
+        `Delete column "${column.name}"?`
+    )) {
         return;
     }
 
-    const columnIndex =
-        tracker.columns.findIndex(
+    const oldColumns =
+        clone(tracker.columns);
+
+    const oldCells =
+        tracker.rows.map(row => ({
+            rowId: row.id,
+            value: row.cells?.[columnId]
+        }));
+
+    tracker.columns =
+        tracker.columns.filter(
             item =>
-                item.id ===
-                columnId
+                item.id !== columnId
         );
 
-    tracker.columns.splice(
-        columnIndex,
-        1
-    );
-
-    tracker.rows.forEach(
-        row => {
-            delete row.cells[
-                columnId
-            ];
-        }
-    );
+    tracker.rows.forEach(row => {
+        delete row.cells[columnId];
+    });
 
     render();
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
-        showToast(
-            "Column deleted"
-        );
+        showToast("Column deleted");
 
     } catch (error) {
-        console.error(error);
+        tracker.columns =
+            oldColumns;
+
+        oldCells.forEach(item => {
+            const row =
+                tracker.rows.find(
+                    currentRow =>
+                        currentRow.id ===
+                        item.rowId
+                );
+
+            if (row) {
+                row.cells[columnId] =
+                    item.value;
+            }
+        });
+
+        render();
 
         showToast(
             "Failed to delete column",
@@ -1281,33 +1360,25 @@ async function addRow() {
         cells: {}
     };
 
-    tracker.columns.forEach(
-        column => {
-            row.cells[column.id] =
-                column.type ===
-                "checkbox"
-                    ? false
-                    : "";
-        }
-    );
+    tracker.columns.forEach(column => {
+        row.cells[column.id] =
+            column.type === "checkbox"
+                ? false
+                : "";
+    });
 
-    tracker.rows.push(
-        row
-    );
+    tracker.rows.push(row);
 
     render();
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
     } catch (error) {
         tracker.rows =
             tracker.rows.filter(
                 item =>
-                    item.id !==
-                    row.id
+                    item.id !== row.id
             );
 
         render();
@@ -1324,9 +1395,7 @@ async function addRow() {
 // DELETE ROW
 // ============================================================
 
-async function deleteRow(
-    rowId
-) {
+async function deleteRow(rowId) {
     const tracker =
         getActiveTracker();
 
@@ -1338,15 +1407,9 @@ async function deleteRow(
                 row.id === rowId
         );
 
-    if (rowIndex === -1) {
-        return;
-    }
+    if (rowIndex === -1) return;
 
-    if (
-        !confirm(
-            "Delete this row?"
-        )
-    ) {
+    if (!confirm("Delete this row?")) {
         return;
     }
 
@@ -1361,13 +1424,9 @@ async function deleteRow(
     render();
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
-        showToast(
-            "Row deleted"
-        );
+        showToast("Row deleted");
 
     } catch (error) {
         tracker.rows.splice(
@@ -1387,7 +1446,7 @@ async function deleteRow(
 
 
 // ============================================================
-// UPDATE TEXT CELL
+// UPDATE TEXT / DATE CELL
 // ============================================================
 
 async function updateCell(
@@ -1415,9 +1474,7 @@ async function updateCell(
         value;
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
     } catch (error) {
         row.cells[columnId] =
@@ -1462,9 +1519,7 @@ async function updateCheckbox(
         checked;
 
     try {
-        await saveTracker(
-            tracker
-        );
+        await saveTracker(tracker);
 
     } catch (error) {
         row.cells[columnId] =
@@ -1490,26 +1545,16 @@ async function duplicateTracker() {
 
     if (!tracker) return;
 
-    const duplicate = {
-        id: generateId(),
+    const duplicate =
+        clone(tracker);
 
-        name:
-            `${tracker.name} Copy`,
+    duplicate.id =
+        generateId();
 
-        columns:
-            JSON.parse(
-                JSON.stringify(
-                    tracker.columns
-                )
-            ),
-
-        rows:
-            JSON.parse(
-                JSON.stringify(
-                    tracker.rows
-                )
-            )
-    };
+    duplicate.name =
+        uniqueTrackerName(
+            `${tracker.name} Copy`
+        );
 
     data.trackers.push(
         duplicate
@@ -1554,9 +1599,7 @@ async function duplicateTracker() {
 // COLUMN MENU
 // ============================================================
 
-function toggleColumnMenu(
-    columnId
-) {
+function toggleColumnMenu(columnId) {
     const menu =
         document.getElementById(
             `column-menu-${columnId}`
@@ -1565,122 +1608,233 @@ function toggleColumnMenu(
     if (!menu) return;
 
     document
-        .querySelectorAll(
-            ".column-menu"
-        )
+        .querySelectorAll(".column-menu")
         .forEach(item => {
-
             if (item !== menu) {
-                item.classList.remove(
-                    "show"
-                );
+                item.classList.remove("show");
             }
-
         });
 
-    menu.classList.toggle(
-        "show"
-    );
+    menu.classList.toggle("show");
 }
 
-
-// ============================================================
-// CLOSE COLUMN MENUS
-// ============================================================
 
 document.addEventListener(
     "click",
     event => {
-
         if (
             !event.target.closest(
                 ".column-header"
             )
         ) {
-
             document
-                .querySelectorAll(
-                    ".column-menu"
-                )
-                .forEach(
-                    menu =>
-                        menu.classList.remove(
-                            "show"
-                        )
-                );
+                .querySelectorAll(".column-menu")
+                .forEach(menu => {
+                    menu.classList.remove(
+                        "show"
+                    );
+                });
         }
-
     }
 );
 
 
 // ============================================================
-// FILE DOWNLOAD HELPER
+// EXPORT CURRENT SHEET
 // ============================================================
 
-function downloadJSON(
-    json,
-    filename
-) {
-    const blob =
-        new Blob(
-            [json],
-            {
-                type:
-                    "application/json"
-            }
+function exportCurrentTracker() {
+    const tracker =
+        getActiveTracker();
+
+    if (!tracker) {
+        showToast(
+            "No tracker selected",
+            "error"
         );
+        return;
+    }
 
-    const url =
-        URL.createObjectURL(
-            blob
-        );
-
-    const link =
-        document.createElement(
-            "a"
-        );
-
-    link.href = url;
-
-    link.download =
-        filename;
-
-    document.body.appendChild(
-        link
+    downloadJSON(
+        JSON.stringify(
+            tracker,
+            null,
+            2
+        ),
+        `${sanitizeFileName(tracker.name)}.json`
     );
 
-    link.click();
-
-    link.remove();
-
-    setTimeout(() => {
-        URL.revokeObjectURL(
-            url
-        );
-    }, 100);
+    showToast(
+        `"${tracker.name}" exported`
+    );
 }
 
 
 // ============================================================
-// CLEAN FILE NAME
+// IMPORT CURRENT SHEET
 // ============================================================
 
-function sanitizeFileName(
-    name
-) {
-    return String(name || "tracker")
-        .replace(
-            /[<>:"/\\|?*\x00-\x1F]/g,
-            ""
-        )
-        .replace(
-            /\s+/g,
-            " "
-        )
-        .trim()
-        .substring(0, 100)
-        || "tracker";
+async function importCurrentTracker(event) {
+    const file =
+        event.target.files?.[0];
+
+    if (!file) return;
+
+    try {
+        const text =
+            await file.text();
+
+        const imported =
+            JSON.parse(text);
+
+        /*
+         * Accept either:
+         * 1. A single tracker object
+         * 2. A full backup containing trackers[]
+         *    only when it contains exactly one tracker.
+         */
+        let sourceTracker =
+            imported;
+
+        if (
+            imported &&
+            Array.isArray(
+                imported.trackers
+            )
+        ) {
+            if (
+                imported.trackers.length !== 1
+            ) {
+                throw new Error(
+                    "This is a full backup. Use Import All instead."
+                );
+            }
+
+            sourceTracker =
+                imported.trackers[0];
+        }
+
+        const normalized =
+            normalizeTracker(
+                sourceTracker
+            );
+
+        const importedTracker = {
+            id: generateId(),
+
+            name:
+                uniqueTrackerName(
+                    normalized.name
+                ),
+
+            columns:
+                normalized.columns.map(
+                    column => ({
+                        id: generateId(),
+                        name: column.name,
+                        type: column.type
+                    })
+                ),
+
+            rows: []
+        };
+
+        /*
+         * Map old column IDs to the new IDs.
+         */
+        const columnMap = {};
+
+        normalized.columns.forEach(
+            (oldColumn, index) => {
+                columnMap[
+                    oldColumn.id
+                ] =
+                    importedTracker.columns[
+                        index
+                    ].id;
+            }
+        );
+
+        importedTracker.rows =
+            normalized.rows.map(row => {
+                const cells = {};
+
+                normalized.columns.forEach(
+                    column => {
+                        const newColumnId =
+                            columnMap[
+                                column.id
+                            ];
+
+                        let value =
+                            row.cells?.[
+                                column.id
+                            ];
+
+                        if (
+                            column.type ===
+                            "checkbox"
+                        ) {
+                            value =
+                                value === true;
+                        } else if (
+                            value === undefined ||
+                            value === null
+                        ) {
+                            value = "";
+                        }
+
+                        cells[newColumnId] =
+                            value;
+                    }
+                );
+
+                return {
+                    id: generateId(),
+                    cells
+                };
+            });
+
+        if (
+            !confirm(
+                `Import "${importedTracker.name}" as a new sheet?`
+            )
+        ) {
+            return;
+        }
+
+        data.trackers.push(
+            importedTracker
+        );
+
+        activeTrackerId =
+            importedTracker.id;
+
+        await saveTracker(
+            importedTracker
+        );
+
+        render();
+
+        showToast(
+            `"${importedTracker.name}" imported`
+        );
+
+    } catch (error) {
+        console.error(
+            "Sheet import failed:",
+            error
+        );
+
+        showToast(
+            error.message ||
+            "Invalid tracker JSON",
+            "error"
+        );
+
+    } finally {
+        event.target.value = "";
+    }
 }
 
 
@@ -1689,15 +1843,12 @@ function sanitizeFileName(
 // ============================================================
 
 function exportJSON() {
-    const json =
+    downloadJSON(
         JSON.stringify(
             data,
             null,
             2
-        );
-
-    downloadJSON(
-        json,
+        ),
         "tracker-backup.json"
     );
 
@@ -1711,11 +1862,9 @@ function exportJSON() {
 // IMPORT ALL
 // ============================================================
 
-async function importJSON(
-    event
-) {
+async function importJSON(event) {
     const file =
-        event.target.files[0];
+        event.target.files?.[0];
 
     if (!file) return;
 
@@ -1733,44 +1882,64 @@ async function importJSON(
             )
         ) {
             throw new Error(
-                "Invalid tracker data"
+                "Invalid tracker backup"
             );
         }
 
-        const confirmed =
-            confirm(
-                "Importing the full backup will replace your current trackers. Continue?"
-            );
-
-        if (!confirmed) {
-            event.target.value = "";
+        if (!confirm(
+            "Importing the full backup will replace your current trackers. Continue?"
+        )) {
             return;
         }
 
-        data =
-            imported;
+        const normalizedTrackers =
+            imported.trackers.map(
+                normalizeTracker
+            );
 
         if (
-            data.trackers.length === 0
+            normalizedTrackers.length === 0
         ) {
-            data.trackers = [
+            normalizedTrackers.push(
                 createDefaultTracker()
-            ];
+            );
         }
+
+        /*
+         * Remove existing Firestore trackers
+         * before writing the imported set.
+         */
+        const existingIds =
+            data.trackers.map(
+                tracker => tracker.id
+            );
+
+        for (
+            const trackerId of existingIds
+        ) {
+            try {
+                await removeTracker(
+                    trackerId
+                );
+            } catch (error) {
+                console.warn(
+                    "Could not remove old tracker:",
+                    trackerId,
+                    error
+                );
+            }
+        }
+
+        data.trackers =
+            normalizedTrackers;
 
         activeTrackerId =
             data.trackers[0].id;
 
-        /*
-         * Save every imported tracker.
-         */
         for (
-            const tracker
-            of data.trackers
+            const tracker of data.trackers
         ) {
-            await saveTracker(
-                tracker
-            );
+            await saveTracker(tracker);
         }
 
         render();
@@ -1780,14 +1949,14 @@ async function importJSON(
         );
 
     } catch (error) {
-
         console.error(
             "Import failed:",
             error
         );
 
         showToast(
-            "Invalid tracker backup",
+            error.message ||
+            "Invalid JSON file",
             "error"
         );
 
@@ -1798,329 +1967,7 @@ async function importJSON(
 
 
 // ============================================================
-// EXPORT CURRENT SHEET
-// ============================================================
-
-function exportCurrentTracker() {
-    const tracker =
-        getActiveTracker();
-
-    if (!tracker) {
-        showToast(
-            "No tracker selected",
-            "error"
-        );
-
-        return;
-    }
-
-    const json =
-        JSON.stringify(
-            tracker,
-            null,
-            2
-        );
-
-    const filename =
-        `${sanitizeFileName(
-            tracker.name
-        )}.json`;
-
-    downloadJSON(
-        json,
-        filename
-    );
-
-    showToast(
-        `"${tracker.name}" exported`
-    );
-}
-
-
-// ============================================================
-// GET UNIQUE TRACKER NAME
-// ============================================================
-
-function getUniqueTrackerName(
-    originalName
-) {
-    const baseName =
-        String(
-            originalName ||
-            "Imported Tracker"
-        ).trim()
-        || "Imported Tracker";
-
-    const existingNames =
-        new Set(
-            data.trackers.map(
-                tracker =>
-                    tracker.name
-                        .trim()
-                        .toLowerCase()
-            )
-        );
-
-    if (
-        !existingNames.has(
-            baseName.toLowerCase()
-        )
-    ) {
-        return baseName;
-    }
-
-    let counter = 2;
-
-    while (
-        existingNames.has(
-            `${baseName} (${counter})`
-                .toLowerCase()
-        )
-    ) {
-        counter++;
-    }
-
-    return `${baseName} (${counter})`;
-}
-
-
-// ============================================================
-// VALIDATE IMPORTED SHEET
-// ============================================================
-
-function validateTracker(
-    tracker
-) {
-    if (
-        !tracker ||
-        typeof tracker !==
-            "object"
-    ) {
-        return false;
-    }
-
-    if (
-        typeof tracker.name !==
-        "string"
-    ) {
-        return false;
-    }
-
-    if (
-        !Array.isArray(
-            tracker.columns
-        )
-    ) {
-        return false;
-    }
-
-    if (
-        !Array.isArray(
-            tracker.rows
-        )
-    ) {
-        return false;
-    }
-
-    for (
-        const column
-        of tracker.columns
-    ) {
-        if (
-            !column ||
-            typeof column.id !==
-                "string" ||
-            typeof column.name !==
-                "string"
-        ) {
-            return false;
-        }
-
-        if (
-            ![
-                "text",
-                "checkbox",
-                "date"
-            ].includes(
-                column.type
-            )
-        ) {
-            return false;
-        }
-    }
-
-    for (
-        const row
-        of tracker.rows
-    ) {
-        if (
-            !row ||
-            typeof row.id !==
-                "string" ||
-            !row.cells ||
-            typeof row.cells !==
-                "object"
-        ) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-
-// ============================================================
-// IMPORT CURRENT SHEET
-// ============================================================
-
-async function importSheetJSON(
-    event
-) {
-    const file =
-        event.target.files[0];
-
-    if (!file) return;
-
-    try {
-        const text =
-            await file.text();
-
-        const parsed =
-            JSON.parse(text);
-
-        /*
-         * Accept either:
-         *
-         * 1. Direct tracker JSON
-         *
-         * {
-         *   id,
-         *   name,
-         *   columns,
-         *   rows
-         * }
-         *
-         * 2. A wrapper:
-         *
-         * {
-         *   tracker: {...}
-         * }
-         */
-        let importedTracker =
-            parsed;
-
-        if (
-            parsed &&
-            parsed.tracker &&
-            typeof parsed.tracker ===
-                "object"
-        ) {
-            importedTracker =
-                parsed.tracker;
-        }
-
-        if (
-            !validateTracker(
-                importedTracker
-            )
-        ) {
-            throw new Error(
-                "Invalid sheet JSON"
-            );
-        }
-
-        /*
-         * Deep clone so the imported object
-         * is completely independent.
-         */
-        const tracker =
-            JSON.parse(
-                JSON.stringify(
-                    importedTracker
-                )
-            );
-
-        /*
-         * IMPORTANT:
-         *
-         * Always generate a new tracker ID.
-         * This prevents the imported sheet from
-         * overwriting an existing Firestore document.
-         */
-        tracker.id =
-            generateId();
-
-        /*
-         * Give the imported tracker a unique
-         * sheet name.
-         */
-        tracker.name =
-            getUniqueTrackerName(
-                tracker.name
-            );
-
-        /*
-         * Make sure all rows have cells.
-         */
-        tracker.rows =
-            tracker.rows.map(
-                row => ({
-                    ...row,
-                    id:
-                        row.id ||
-                        generateId(),
-                    cells:
-                        row.cells || {}
-                })
-            );
-
-        data.trackers.push(
-            tracker
-        );
-
-        activeTrackerId =
-            tracker.id;
-
-        /*
-         * Render immediately.
-         */
-        render();
-
-        /*
-         * Persist only this imported sheet.
-         */
-        await saveTracker(
-            tracker
-        );
-
-        showToast(
-            `"${tracker.name}" imported successfully`
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Sheet import failed:",
-            error
-        );
-
-        showToast(
-            "Invalid sheet JSON file",
-            "error"
-        );
-
-    } finally {
-        /*
-         * Reset the file input so the
-         * same file can be selected again.
-         */
-        event.target.value = "";
-    }
-}
-
-
-// ============================================================
-// GLOBAL FUNCTIONS
+// EXPOSE FUNCTIONS TO INLINE HTML HANDLERS
 // ============================================================
 
 window.toggleTheme =
@@ -2135,8 +1982,8 @@ window.importJSON =
 window.exportCurrentTracker =
     exportCurrentTracker;
 
-window.importSheetJSON =
-    importSheetJSON;
+window.importCurrentTracker =
+    importCurrentTracker;
 
 window.addTracker =
     addTracker;
