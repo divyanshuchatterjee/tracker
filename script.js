@@ -174,7 +174,10 @@ function normalizeTracker(tracker) {
             type: "notes",
             cards: cards.map(card => ({
                 id: String(card.id || generateId()),
-                text: String(card.text ?? "")
+                title: String(card.title ?? "NOTE"),
+                html: String(card.html ?? (card.text ? escapeHTML(String(card.text)).replace(/\n/g, "<br>") : "")),
+                text: String(card.text ?? ""),
+                color: ["red", "yellow", "green"].includes(card.color) ? card.color : ""
             }))
         };
     }
@@ -601,71 +604,144 @@ function renderNotes(container, notes) {
 }
 
 
+function sanitizeNoteHtml(html) {
+    const template = document.createElement("template");
+    template.innerHTML = String(html ?? "");
+
+    const allowedTags = new Set([
+        "B", "STRONG", "I", "EM", "U", "S", "STRIKE",
+        "SPAN", "BR", "DIV", "P", "UL", "OL", "LI", "A"
+    ]);
+
+    const walker = document.createTreeWalker(
+        template.content,
+        NodeFilter.SHOW_ELEMENT
+    );
+
+    const elements = [];
+    while (walker.nextNode()) {
+        elements.push(walker.currentNode);
+    }
+
+    elements.forEach(element => {
+        if (!allowedTags.has(element.tagName)) {
+            const parent = element.parentNode;
+            while (element.firstChild) {
+                parent.insertBefore(element.firstChild, element);
+            }
+            parent.removeChild(element);
+            return;
+        }
+
+        [...element.attributes].forEach(attribute => {
+            if (attribute.name === "style") {
+                const colorMatch = attribute.value.match(/(?:^|;)\s*color\s*:\s*(#[0-9a-fA-F]{3,8}|rgb\([^)]*\)|rgba\([^)]*\)|[a-zA-Z]+)\s*;?/i);
+                if (colorMatch) {
+                    element.setAttribute("style", `color: ${colorMatch[1]};`);
+                } else {
+                    element.removeAttribute("style");
+                }
+            } else if (attribute.name === "href" && element.tagName === "A") {
+                const href = attribute.value.trim();
+                if (/^https?:\/\//i.test(href)) {
+                    element.setAttribute("href", href);
+                    element.setAttribute("target", "_blank");
+                    element.setAttribute("rel", "noopener noreferrer");
+                } else {
+                    element.removeAttribute("href");
+                }
+            } else {
+                element.removeAttribute(attribute.name);
+            }
+        });
+    });
+
+    return template.innerHTML;
+}
+
+
+function noteCardColorClass(color) {
+    return ["red", "yellow", "green"].includes(color)
+        ? `note-${color}`
+        : "";
+}
+
+
 function renderNoteCard(card) {
+    const cardColor = card.color || "";
+    const colorClass = noteCardColorClass(cardColor);
+    const content = card.html !== undefined
+        ? sanitizeNoteHtml(card.html)
+        : escapeHTML(card.text || "").replace(/\n/g, "<br>");
+
     return `
-        <article class="note-card" data-card-id="${escapeAttribute(card.id)}">
+        <article class="note-card ${colorClass}" data-card-id="${escapeAttribute(card.id)}">
             <div class="note-card-header">
-                <span class="note-card-label">Note</span>
-                <button
-                    class="note-card-delete"
-                    onclick="deleteNoteCard('${card.id}')"
-                    title="Delete card"
+                <input
+                    type="text"
+                    class="note-card-title"
+                    value="${escapeAttribute(card.title || "NOTE")}" 
+                    oninput="updateNoteCardTitle('${card.id}', this.value)"
+                    aria-label="Note title"
                 >
-                    🗑
-                </button>
+
+                <div class="note-card-header-actions">
+                    <div class="note-card-colors" title="Card color">
+                        <button class="note-color-dot note-color-default ${!cardColor ? "active" : ""}" onmousedown="event.preventDefault()" onclick="setNoteCardColor('${card.id}', '')" title="Default"></button>
+                        <button class="note-color-dot note-color-red ${cardColor === "red" ? "active" : ""}" onmousedown="event.preventDefault()" onclick="setNoteCardColor('${card.id}', 'red')" title="Matte red"></button>
+                        <button class="note-color-dot note-color-yellow ${cardColor === "yellow" ? "active" : ""}" onmousedown="event.preventDefault()" onclick="setNoteCardColor('${card.id}', 'yellow')" title="Matte yellow"></button>
+                        <button class="note-color-dot note-color-green ${cardColor === "green" ? "active" : ""}" onmousedown="event.preventDefault()" onclick="setNoteCardColor('${card.id}', 'green')" title="Matte green"></button>
+                    </div>
+
+                    <button
+                        class="note-card-delete"
+                        onclick="deleteNoteCard('${card.id}')"
+                        title="Delete card"
+                    >
+                        🗑
+                    </button>
+                </div>
             </div>
 
-            <textarea
+            <div class="note-format-toolbar" aria-label="Text formatting">
+                <button type="button" onmousedown="event.preventDefault()" onclick="formatNote('${card.id}', 'bold')" title="Bold"><strong>B</strong></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="formatNote('${card.id}', 'italic')" title="Italic"><em>I</em></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="formatNote('${card.id}', 'underline')" title="Underline"><u>U</u></button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="formatNote('${card.id}', 'strikeThrough')" title="Strikethrough"><s>S</s></button>
+                <span class="note-toolbar-separator"></span>
+                <button type="button" onmousedown="event.preventDefault()" onclick="formatNote('${card.id}', 'insertUnorderedList')" title="Bullet list">•≡</button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="formatNote('${card.id}', 'insertOrderedList')" title="Numbered list">1≡</button>
+                <button type="button" onmousedown="event.preventDefault()" onclick="formatNoteLink('${card.id}')" title="Add link">🔗</button>
+                <span class="note-toolbar-separator"></span>
+                <button type="button" class="note-text-color-button" onmousedown="event.preventDefault()" onclick="formatNoteColor('${card.id}', '#202124')" title="Dark text">A</button>
+                <button type="button" class="note-text-color-button text-red" onmousedown="event.preventDefault()" onclick="formatNoteColor('${card.id}', '#c62828')" title="Red text">A</button>
+                <button type="button" class="note-text-color-button text-blue" onmousedown="event.preventDefault()" onclick="formatNoteColor('${card.id}', '#1565c0')" title="Blue text">A</button>
+                <button type="button" class="note-text-color-button text-green" onmousedown="event.preventDefault()" onclick="formatNoteColor('${card.id}', '#2e7d32')" title="Green text">A</button>
+                <button type="button" class="note-text-color-button text-purple" onmousedown="event.preventDefault()" onclick="formatNoteColor('${card.id}', '#6a1b9a')" title="Purple text">A</button>
+            </div>
+
+            <div
+                id="note-editor-${escapeAttribute(card.id)}"
                 class="note-card-text"
-                placeholder="Start writing..."
-                oninput="updateNoteCard('${card.id}', this.value)"
-            >${escapeHTML(card.text)}</textarea>
+                contenteditable="true"
+                data-placeholder="Start writing..."
+                oninput="updateNoteCard('${card.id}', this.innerHTML)"
+                onfocus="activeNoteEditorId='${card.id}'"
+                onclick="activeNoteEditorId='${card.id}'"
+                onkeyup="activeNoteEditorId='${card.id}'"
+                spellcheck="true"
+            >${content}</div>
         </article>
     `;
 }
 
 
-async function addNoteCard() {
-    const notes = getActiveTracker();
-
-    if (!notes || notes.type !== "notes") return;
-
-    const card = {
-        id: generateId(),
-        text: ""
-    };
-
-    notes.cards.push(card);
-    render();
-
-    try {
-        await saveTracker(notes);
-
-        requestAnimationFrame(() => {
-            const textareas = document.querySelectorAll(".note-card-text");
-            const last = textareas[textareas.length - 1];
-            if (last) last.focus();
-        });
-    } catch (error) {
-        notes.cards = notes.cards.filter(item => item.id !== card.id);
-        render();
-        showToast("Failed to add card", "error");
-    }
-}
-
-
+let activeNoteEditorId = null;
 let noteSaveTimers = new Map();
+let noteTitleSaveTimers = new Map();
 
-function updateNoteCard(cardId, value) {
-    const notes = getActiveTracker();
 
-    if (!notes || notes.type !== "notes") return;
-
-    const card = notes.cards.find(item => item.id === cardId);
-    if (!card) return;
-
-    card.text = value;
-
+async function saveNoteCardDebounced(notes, cardId) {
     if (noteSaveTimers.has(cardId)) {
         clearTimeout(noteSaveTimers.get(cardId));
     }
@@ -685,9 +761,151 @@ function updateNoteCard(cardId, value) {
 }
 
 
+function updateNoteCardTitle(cardId, value) {
+    const notes = getActiveTracker();
+    if (!notes || notes.type !== "notes") return;
+
+    const card = notes.cards.find(item => item.id === cardId);
+    if (!card) return;
+
+    card.title = value;
+
+    if (noteTitleSaveTimers.has(cardId)) {
+        clearTimeout(noteTitleSaveTimers.get(cardId));
+    }
+
+    const timer = setTimeout(async () => {
+        try {
+            await saveTracker(notes);
+        } catch (error) {
+            console.error("Failed to save note title:", error);
+            showToast("Failed to save note title", "error");
+        } finally {
+            noteTitleSaveTimers.delete(cardId);
+        }
+    }, 500);
+
+    noteTitleSaveTimers.set(cardId, timer);
+}
+
+
+function updateNoteCard(cardId, html) {
+    const notes = getActiveTracker();
+    if (!notes || notes.type !== "notes") return;
+
+    const card = notes.cards.find(item => item.id === cardId);
+    if (!card) return;
+
+    card.html = sanitizeNoteHtml(html);
+    card.text = card.html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
+    saveNoteCardDebounced(notes, cardId);
+}
+
+
+function getNoteEditor(cardId) {
+    return document.getElementById(`note-editor-${cardId}`);
+}
+
+
+function restoreNoteSelection(editor) {
+    if (!editor) return false;
+    editor.focus();
+    return true;
+}
+
+
+function formatNote(cardId, command) {
+    const editor = getNoteEditor(cardId);
+    if (!restoreNoteSelection(editor)) return;
+
+    document.execCommand(command, false, null);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+
+function formatNoteColor(cardId, color) {
+    const editor = getNoteEditor(cardId);
+    if (!restoreNoteSelection(editor)) return;
+
+    document.execCommand("foreColor", false, color);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+
+function formatNoteLink(cardId) {
+    const editor = getNoteEditor(cardId);
+    if (!restoreNoteSelection(editor)) return;
+
+    const url = prompt("Enter URL:", "https://");
+    if (!url) return;
+
+    const cleanUrl = url.trim();
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+        showToast("Please enter a valid http/https URL", "error");
+        return;
+    }
+
+    document.execCommand("createLink", false, cleanUrl);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+
+async function setNoteCardColor(cardId, color) {
+    const notes = getActiveTracker();
+    if (!notes || notes.type !== "notes") return;
+
+    const card = notes.cards.find(item => item.id === cardId);
+    if (!card) return;
+
+    card.color = ["red", "yellow", "green"].includes(color)
+        ? color
+        : "";
+
+    render();
+
+    try {
+        await saveTracker(notes);
+    } catch (error) {
+        console.error("Failed to save card color:", error);
+        showToast("Failed to save card color", "error");
+    }
+}
+
+
+async function addNoteCard() {
+    const notes = getActiveTracker();
+    if (!notes || notes.type !== "notes") return;
+
+    const card = {
+        id: generateId(),
+        title: "NOTE",
+        html: "",
+        text: "",
+        color: ""
+    };
+
+    notes.cards.push(card);
+    render();
+
+    try {
+        await saveTracker(notes);
+
+        requestAnimationFrame(() => {
+            const editors = document.querySelectorAll(".note-card-text");
+            const last = editors[editors.length - 1];
+            if (last) last.focus();
+        });
+    } catch (error) {
+        notes.cards = notes.cards.filter(item => item.id !== card.id);
+        render();
+        showToast("Failed to add card", "error");
+    }
+}
+
+
 async function deleteNoteCard(cardId) {
     const notes = getActiveTracker();
-
     if (!notes || notes.type !== "notes") return;
 
     const index = notes.cards.findIndex(card => card.id === cardId);
@@ -708,7 +926,6 @@ async function deleteNoteCard(cardId) {
         showToast("Failed to delete card", "error");
     }
 }
-
 
 // ============================================================
 // COLUMN HEADER
@@ -1623,8 +1840,12 @@ async function duplicateTracker() {
 
     if (duplicate.type === "notes") {
         duplicate.cards = (duplicate.cards || []).map(card => ({
+            ...card,
             id: generateId(),
-            text: String(card.text ?? "")
+            title: String(card.title ?? "NOTE"),
+            html: String(card.html ?? ""),
+            text: String(card.text ?? ""),
+            color: ["red", "yellow", "green"].includes(card.color) ? card.color : ""
         }));
     } else {
         duplicate.type = "tracker";
@@ -1770,8 +1991,12 @@ async function importCurrentTracker(event) {
 
         if (importedTracker.type === "notes") {
             importedTracker.cards = (normalized.cards || []).map(card => ({
+                ...card,
                 id: generateId(),
-                text: String(card.text ?? "")
+                title: String(card.title ?? "NOTE"),
+                html: String(card.html ?? ""),
+                text: String(card.text ?? ""),
+                color: ["red", "yellow", "green"].includes(card.color) ? card.color : ""
             }));
         } else {
             importedTracker.type = "tracker";
@@ -2014,8 +2239,29 @@ window.toggleColumnMenu =
 window.addNoteCard =
     addNoteCard;
 
+window.setNoteCardColor =
+    setNoteCardColor;
+
+window.formatNote =
+    formatNote;
+
+window.formatNoteColor =
+    formatNoteColor;
+
+window.formatNoteLink =
+    formatNoteLink;
+
 window.updateNoteCard =
     updateNoteCard;
+
+window.updateNoteCardTitle =
+    updateNoteCardTitle;
+
+window.updateNoteCard =
+    updateNoteCard;
+
+window.updateNoteCardTitle =
+    updateNoteCardTitle;
 
 window.deleteNoteCard =
     deleteNoteCard;
