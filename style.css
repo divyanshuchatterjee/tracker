@@ -1273,3 +1273,240 @@ button:active {
     color: var(--muted) !important;
     padding: 24px !important;
 }
+
+/* ============================================================
+   NOTES
+   ============================================================ */
+
+.notes-header {
+    margin-bottom: 18px;
+}
+
+.notes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+    align-items: start;
+}
+
+.note-card {
+    position: relative;
+    min-height: 260px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.note-card:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-1px);
+}
+
+.note-card-default {
+    background: var(--card);
+}
+
+.note-card-red {
+    background: #f6d7d5;
+    border-color: #e7b7b3;
+}
+
+.note-card-yellow {
+    background: #f6edc8;
+    border-color: #e6d995;
+}
+
+.note-card-green {
+    background: #d9ecd9;
+    border-color: #b8d8b8;
+}
+
+body.dark-mode .note-card-red {
+    background: #493536;
+    border-color: #654345;
+}
+
+body.dark-mode .note-card-yellow {
+    background: #4a4634;
+    border-color: #665f3e;
+}
+
+body.dark-mode .note-card-green {
+    background: #354737;
+    border-color: #4c654f;
+}
+
+.note-card-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.note-title-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #222;
+    font-size: 15px;
+    font-weight: 800;
+    padding: 5px 2px;
+}
+
+body.dark-mode .note-title-input {
+    color: var(--text);
+}
+
+.note-card-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.note-icon-button {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #555;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.note-icon-button:hover {
+    background: rgba(0,0,0,.08);
+}
+
+body.dark-mode .note-icon-button {
+    color: var(--text-secondary);
+}
+
+.note-color-menu {
+    display: none;
+    position: absolute;
+    top: 48px;
+    right: 12px;
+    z-index: 20;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+}
+
+.note-color-menu.show {
+    display: flex;
+    gap: 5px;
+}
+
+.note-color-choice {
+    width: 30px;
+    height: 26px;
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 6px;
+    font-size: 0;
+    cursor: pointer;
+}
+
+.note-color-choice.matte-red { background: #e9aaa5; }
+.note-color-choice.matte-yellow { background: #eadb91; }
+.note-color-choice.matte-green { background: #a9d0aa; }
+.note-color-choice.matte-default { background: var(--surface); }
+
+.note-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    padding: 5px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 7px;
+    background: rgba(255,255,255,.28);
+}
+
+.note-toolbar button,
+.note-toolbar select {
+    min-width: 27px;
+    height: 27px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: #333;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.note-toolbar button:hover,
+.note-toolbar select:hover {
+    background: rgba(0,0,0,.08);
+}
+
+body.dark-mode .note-toolbar button,
+body.dark-mode .note-toolbar select {
+    color: var(--text);
+}
+
+.note-content {
+    min-height: 165px;
+    outline: none;
+    padding: 6px 4px;
+    color: #222;
+    font-size: 14px;
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+}
+
+.note-content:empty::before {
+    content: "Start writing...";
+    color: rgba(0,0,0,.38);
+}
+
+body.dark-mode .note-content {
+    color: var(--text);
+}
+
+body.dark-mode .note-content:empty::before {
+    color: var(--muted);
+}
+
+.note-content a {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+.note-content ul,
+.note-content ol {
+    padding-left: 24px;
+}
+
+.notes-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 70px 20px;
+    color: var(--muted);
+}
+
+.notes-empty-icon {
+    font-size: 38px;
+    margin-bottom: 8px;
+}
+
+.notes-empty h2 {
+    color: var(--text);
+    margin: 0 0 6px;
+}
+
+.notes-empty p {
+    margin: 0;
+}
+
+@media (max-width: 700px) {
+    .notes-grid {
+        grid-template-columns: 1fr;
+    }
+}
