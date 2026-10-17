@@ -161,6 +161,24 @@ function normalizeTracker(tracker) {
         throw new Error("Invalid tracker");
     }
 
+    const type = tracker.type === "notes" ? "notes" : "tracker";
+
+    if (type === "notes") {
+        const cards = Array.isArray(tracker.cards)
+            ? tracker.cards
+            : [];
+
+        return {
+            id: String(tracker.id || generateId()),
+            name: String(tracker.name || "Notes").trim() || "Notes",
+            type: "notes",
+            cards: cards.map(card => ({
+                id: String(card.id || generateId()),
+                text: String(card.text ?? "")
+            }))
+        };
+    }
+
     const columns = Array.isArray(tracker.columns)
         ? tracker.columns
         : [];
@@ -194,9 +212,8 @@ function normalizeTracker(tracker) {
 
     return {
         id: String(tracker.id || generateId()),
-        name:
-            String(tracker.name || "My Tracker").trim() ||
-            "My Tracker",
+        name: String(tracker.name || "My Tracker").trim() || "My Tracker",
+        type: "tracker",
         columns: normalizedColumns,
         rows: normalizedRows
     };
@@ -253,9 +270,8 @@ function updateThemeButton() {
 function createDefaultTracker() {
     return {
         id: generateId(),
-
         name: "My Tracker",
-
+        type: "tracker",
         columns: [
             {
                 id: generateId(),
@@ -263,8 +279,17 @@ function createDefaultTracker() {
                 type: "text"
             }
         ],
-
         rows: []
+    };
+}
+
+
+function createNotes(name) {
+    return {
+        id: generateId(),
+        name: String(name || "Notes").trim() || "Notes",
+        type: "notes",
+        cards: []
     };
 }
 
@@ -471,13 +496,11 @@ function renderTrackerList() {
 // ============================================================
 
 function renderMain() {
-    const container =
-        document.getElementById("mainContent");
+    const container = document.getElementById("mainContent");
 
     if (!container) return;
 
-    const tracker =
-        getActiveTracker();
+    const tracker = getActiveTracker();
 
     if (!tracker) {
         container.innerHTML = `
@@ -488,146 +511,202 @@ function renderMain() {
         return;
     }
 
+    if (tracker.type === "notes") {
+        renderNotes(container, tracker);
+        return;
+    }
+
     container.innerHTML = `
         <div class="tracker-header">
-
             <div class="tracker-title-row">
-
-                <h1>
-                    ${escapeHTML(tracker.name)}
-                </h1>
-
-                <button
-                    class="icon-button small"
-                    onclick="renameTracker()"
-                    title="Rename tracker"
-                >
-                    ✎
-                </button>
-
+                <h1>${escapeHTML(tracker.name)}</h1>
+                <button class="icon-button small" onclick="renameTracker()" title="Rename tracker">✎</button>
             </div>
 
             <div class="tracker-actions">
-
-                <button
-                    class="secondary-button"
-                    onclick="exportCurrentTracker()"
-                    title="Export this tracker only"
-                >
-                    Export Sheet
-                </button>
-
-                <label
-                    class="secondary-button import-button"
-                    title="Import a tracker as a new sheet"
-                >
+                <button class="secondary-button" onclick="exportCurrentTracker()" title="Export this tracker only">Export Sheet</button>
+                <label class="secondary-button import-button" title="Import a tracker as a new sheet">
                     Import Sheet
-
-                    <input
-                        type="file"
-                        accept=".json,application/json"
-                        onchange="importCurrentTracker(event)"
-                        hidden
-                    >
+                    <input type="file" accept=".json,application/json" onchange="importCurrentTracker(event)" hidden>
                 </label>
-
-                <button
-                    class="secondary-button"
-                    onclick="duplicateTracker()"
-                >
-                    Duplicate
-                </button>
-
-                <button
-                    class="danger-button"
-                    onclick="deleteTracker()"
-                >
-                    Delete
-                </button>
-
+                <button class="secondary-button" onclick="duplicateTracker()">Duplicate</button>
+                <button class="danger-button" onclick="deleteTracker()">Delete</button>
             </div>
-
         </div>
-
 
         <div class="table-wrapper">
-
             <table class="tracker-table">
-
                 <thead>
-
                     <tr>
-
-                        ${tracker.columns
-                            .map(column =>
-                                renderColumnHeader(
-                                    tracker,
-                                    column
-                                )
-                            )
-                            .join("")}
-
+                        ${tracker.columns.map(column => renderColumnHeader(tracker, column)).join("")}
                         <th class="row-actions-header">
-
-                            <button
-                                class="add-column-button"
-                                onclick="addColumn()"
-                                title="Add column"
-                            >
-                                +
-                            </button>
-
+                            <button class="add-column-button" onclick="addColumn()" title="Add column">+</button>
                         </th>
-
                     </tr>
-
                 </thead>
-
-
                 <tbody>
-
-                    ${
-                        tracker.rows.length === 0
-
-                            ? `
-                                <tr>
-                                    <td
-                                        colspan="${
-                                            tracker.columns.length + 1
-                                        }"
-                                        class="empty-row"
-                                    >
-                                        No rows yet.
-                                    </td>
-                                </tr>
-                            `
-
-                            :
-
-                            tracker.rows
-                                .map(row =>
-                                    renderRow(
-                                        tracker,
-                                        row
-                                    )
-                                )
-                                .join("")
-                    }
-
+                    ${tracker.rows.length === 0
+                        ? `<tr><td colspan="${tracker.columns.length + 1}" class="empty-row">No rows yet.</td></tr>`
+                        : tracker.rows.map(row => renderRow(tracker, row)).join("")}
                 </tbody>
-
             </table>
-
         </div>
 
-
-        <button
-            class="add-row-button"
-            onclick="addRow()"
-        >
-            + Add Row
-        </button>
+        <button class="add-row-button" onclick="addRow()">+ Add Row</button>
     `;
+}
+
+
+// ============================================================
+// NOTES / CARDS
+// ============================================================
+
+function renderNotes(container, notes) {
+    container.innerHTML = `
+        <div class="tracker-header notes-header">
+            <div class="tracker-title-row">
+                <h1>${escapeHTML(notes.name)}</h1>
+                <button class="icon-button small" onclick="renameTracker()" title="Rename notes">✎</button>
+            </div>
+
+            <div class="tracker-actions">
+                <button class="secondary-button" onclick="exportCurrentTracker()" title="Export these notes">Export Notes</button>
+                <label class="secondary-button import-button" title="Import notes as a new sheet">
+                    Import Notes
+                    <input type="file" accept=".json,application/json" onchange="importCurrentTracker(event)" hidden>
+                </label>
+                <button class="secondary-button" onclick="duplicateTracker()">Duplicate</button>
+                <button class="danger-button" onclick="deleteTracker()">Delete</button>
+            </div>
+        </div>
+
+        <div class="notes-toolbar">
+            <button class="primary-button" onclick="addNoteCard()">+ Add Card</button>
+            <span class="notes-count">${notes.cards.length} ${notes.cards.length === 1 ? "card" : "cards"}</span>
+        </div>
+
+        <div class="notes-grid">
+            ${notes.cards.length === 0
+                ? `
+                    <div class="notes-empty-state">
+                        <div class="notes-empty-icon">✎</div>
+                        <h2>No cards yet</h2>
+                        <p>Add a card to start writing notes.</p>
+                        <button class="primary-button" onclick="addNoteCard()">+ Add Card</button>
+                    </div>
+                `
+                : notes.cards.map(card => renderNoteCard(card)).join("")}
+        </div>
+    `;
+}
+
+
+function renderNoteCard(card) {
+    return `
+        <article class="note-card" data-card-id="${escapeAttribute(card.id)}">
+            <div class="note-card-header">
+                <span class="note-card-label">Note</span>
+                <button
+                    class="note-card-delete"
+                    onclick="deleteNoteCard('${card.id}')"
+                    title="Delete card"
+                >
+                    🗑
+                </button>
+            </div>
+
+            <textarea
+                class="note-card-text"
+                placeholder="Start writing..."
+                oninput="updateNoteCard('${card.id}', this.value)"
+            >${escapeHTML(card.text)}</textarea>
+        </article>
+    `;
+}
+
+
+async function addNoteCard() {
+    const notes = getActiveTracker();
+
+    if (!notes || notes.type !== "notes") return;
+
+    const card = {
+        id: generateId(),
+        text: ""
+    };
+
+    notes.cards.push(card);
+    render();
+
+    try {
+        await saveTracker(notes);
+
+        requestAnimationFrame(() => {
+            const textareas = document.querySelectorAll(".note-card-text");
+            const last = textareas[textareas.length - 1];
+            if (last) last.focus();
+        });
+    } catch (error) {
+        notes.cards = notes.cards.filter(item => item.id !== card.id);
+        render();
+        showToast("Failed to add card", "error");
+    }
+}
+
+
+let noteSaveTimers = new Map();
+
+function updateNoteCard(cardId, value) {
+    const notes = getActiveTracker();
+
+    if (!notes || notes.type !== "notes") return;
+
+    const card = notes.cards.find(item => item.id === cardId);
+    if (!card) return;
+
+    card.text = value;
+
+    if (noteSaveTimers.has(cardId)) {
+        clearTimeout(noteSaveTimers.get(cardId));
+    }
+
+    const timer = setTimeout(async () => {
+        try {
+            await saveTracker(notes);
+        } catch (error) {
+            console.error("Failed to save note card:", error);
+            showToast("Failed to save note", "error");
+        } finally {
+            noteSaveTimers.delete(cardId);
+        }
+    }, 500);
+
+    noteSaveTimers.set(cardId, timer);
+}
+
+
+async function deleteNoteCard(cardId) {
+    const notes = getActiveTracker();
+
+    if (!notes || notes.type !== "notes") return;
+
+    const index = notes.cards.findIndex(card => card.id === cardId);
+    if (index === -1) return;
+
+    if (!confirm("Delete this card?")) return;
+
+    const deletedCard = notes.cards[index];
+    notes.cards.splice(index, 1);
+    render();
+
+    try {
+        await saveTracker(notes);
+        showToast("Card deleted");
+    } catch (error) {
+        notes.cards.splice(index, 0, deletedCard);
+        render();
+        showToast("Failed to delete card", "error");
+    }
 }
 
 
@@ -906,60 +985,54 @@ function updateCellLinkButton(input) {
 // ============================================================
 
 async function addTracker() {
-    const name =
-        prompt("Enter tracker name:");
+    const choice = prompt(
+        "What do you want to create?\n\n1 = Tracker\n2 = Notes (new)",
+        "1"
+    );
 
-    if (
-        name === null ||
-        !name.trim()
-    ) {
+    if (choice === null) return;
+
+    const trimmedChoice = choice.trim().toLowerCase();
+
+    if (trimmedChoice !== "1" && trimmedChoice !== "2" && trimmedChoice !== "tracker" && trimmedChoice !== "notes") {
+        showToast("Please choose 1 for Tracker or 2 for Notes", "error");
         return;
     }
 
-    const tracker = {
-        id: generateId(),
+    const isNotes = trimmedChoice === "2" || trimmedChoice === "notes";
 
-        name: name.trim(),
+    const name = prompt(
+        isNotes ? "Enter notes name:" : "Enter tracker name:",
+        isNotes ? "Notes" : "My Tracker"
+    );
 
-        columns: [
-            {
-                id: generateId(),
-                name: "Task",
-                type: "text"
-            }
-        ],
+    if (name === null || !name.trim()) return;
 
-        rows: []
-    };
+    const item = isNotes
+        ? createNotes(name.trim())
+        : {
+            id: generateId(),
+            name: name.trim(),
+            type: "tracker",
+            columns: [
+                { id: generateId(), name: "Task", type: "text" }
+            ],
+            rows: []
+        };
 
-    data.trackers.push(tracker);
-    activeTrackerId = tracker.id;
-
+    data.trackers.push(item);
+    activeTrackerId = item.id;
     render();
 
     try {
-        await saveTracker(tracker);
-
-        showToast("Tracker created");
-
+        await saveTracker(item);
+        showToast(isNotes ? "Notes created" : "Tracker created");
     } catch (error) {
         console.error(error);
-
-        data.trackers =
-            data.trackers.filter(
-                item =>
-                    item.id !== tracker.id
-            );
-
-        activeTrackerId =
-            data.trackers[0]?.id || null;
-
+        data.trackers = data.trackers.filter(current => current.id !== item.id);
+        activeTrackerId = data.trackers[0]?.id || null;
         render();
-
-        showToast(
-            "Failed to create tracker",
-            "error"
-        );
+        showToast(isNotes ? "Failed to create notes" : "Failed to create tracker", "error");
     }
 }
 
@@ -1540,57 +1613,56 @@ async function updateCheckbox(
 // ============================================================
 
 async function duplicateTracker() {
-    const tracker =
-        getActiveTracker();
+    const tracker = getActiveTracker();
 
     if (!tracker) return;
 
-    const duplicate =
-        clone(tracker);
+    const duplicate = clone(tracker);
+    duplicate.id = generateId();
+    duplicate.name = uniqueTrackerName(`${tracker.name} Copy`);
 
-    duplicate.id =
-        generateId();
+    if (duplicate.type === "notes") {
+        duplicate.cards = (duplicate.cards || []).map(card => ({
+            id: generateId(),
+            text: String(card.text ?? "")
+        }));
+    } else {
+        duplicate.type = "tracker";
+        duplicate.columns = (duplicate.columns || []).map(column => ({
+            ...column,
+            id: generateId()
+        }));
 
-    duplicate.name =
-        uniqueTrackerName(
-            `${tracker.name} Copy`
-        );
+        const oldColumns = tracker.columns || [];
+        const columnMap = {};
+        oldColumns.forEach((column, index) => {
+            if (duplicate.columns[index]) {
+                columnMap[column.id] = duplicate.columns[index].id;
+            }
+        });
 
-    data.trackers.push(
-        duplicate
-    );
+        duplicate.rows = (duplicate.rows || []).map(row => {
+            const cells = {};
+            Object.entries(row.cells || {}).forEach(([oldId, value]) => {
+                const newId = columnMap[oldId];
+                if (newId) cells[newId] = value;
+            });
+            return { id: generateId(), cells };
+        });
+    }
 
-    activeTrackerId =
-        duplicate.id;
-
+    data.trackers.push(duplicate);
+    activeTrackerId = duplicate.id;
     render();
 
     try {
-        await saveTracker(
-            duplicate
-        );
-
-        showToast(
-            "Tracker duplicated"
-        );
-
+        await saveTracker(duplicate);
+        showToast(tracker.type === "notes" ? "Notes duplicated" : "Tracker duplicated");
     } catch (error) {
-        data.trackers =
-            data.trackers.filter(
-                item =>
-                    item.id !==
-                    duplicate.id
-            );
-
-        activeTrackerId =
-            tracker.id;
-
+        data.trackers = data.trackers.filter(item => item.id !== duplicate.id);
+        activeTrackerId = tracker.id;
         render();
-
-        showToast(
-            "Failed to duplicate tracker",
-            "error"
-        );
+        showToast("Failed to duplicate", "error");
     }
 }
 
@@ -1675,163 +1747,75 @@ function exportCurrentTracker() {
 // ============================================================
 
 async function importCurrentTracker(event) {
-    const file =
-        event.target.files?.[0];
-
+    const file = event.target.files?.[0];
     if (!file) return;
 
     try {
-        const text =
-            await file.text();
+        const text = await file.text();
+        const imported = JSON.parse(text);
 
-        const imported =
-            JSON.parse(text);
+        let sourceTracker = imported;
 
-        /*
-         * Accept either:
-         * 1. A single tracker object
-         * 2. A full backup containing trackers[]
-         *    only when it contains exactly one tracker.
-         */
-        let sourceTracker =
-            imported;
-
-        if (
-            imported &&
-            Array.isArray(
-                imported.trackers
-            )
-        ) {
-            if (
-                imported.trackers.length !== 1
-            ) {
-                throw new Error(
-                    "This is a full backup. Use Import All instead."
-                );
+        if (imported && Array.isArray(imported.trackers)) {
+            if (imported.trackers.length !== 1) {
+                throw new Error("This is a full backup. Use Import All instead.");
             }
-
-            sourceTracker =
-                imported.trackers[0];
+            sourceTracker = imported.trackers[0];
         }
 
-        const normalized =
-            normalizeTracker(
-                sourceTracker
-            );
+        const normalized = normalizeTracker(sourceTracker);
+        const importedTracker = clone(normalized);
+        importedTracker.id = generateId();
+        importedTracker.name = uniqueTrackerName(normalized.name);
 
-        const importedTracker = {
-            id: generateId(),
+        if (importedTracker.type === "notes") {
+            importedTracker.cards = (normalized.cards || []).map(card => ({
+                id: generateId(),
+                text: String(card.text ?? "")
+            }));
+        } else {
+            importedTracker.type = "tracker";
+            importedTracker.columns = normalized.columns.map(column => ({
+                id: generateId(),
+                name: column.name,
+                type: column.type
+            }));
 
-            name:
-                uniqueTrackerName(
-                    normalized.name
-                ),
-
-            columns:
-                normalized.columns.map(
-                    column => ({
-                        id: generateId(),
-                        name: column.name,
-                        type: column.type
-                    })
-                ),
-
-            rows: []
-        };
-
-        /*
-         * Map old column IDs to the new IDs.
-         */
-        const columnMap = {};
-
-        normalized.columns.forEach(
-            (oldColumn, index) => {
-                columnMap[
-                    oldColumn.id
-                ] =
-                    importedTracker.columns[
-                        index
-                    ].id;
-            }
-        );
-
-        importedTracker.rows =
-            normalized.rows.map(row => {
-                const cells = {};
-
-                normalized.columns.forEach(
-                    column => {
-                        const newColumnId =
-                            columnMap[
-                                column.id
-                            ];
-
-                        let value =
-                            row.cells?.[
-                                column.id
-                            ];
-
-                        if (
-                            column.type ===
-                            "checkbox"
-                        ) {
-                            value =
-                                value === true;
-                        } else if (
-                            value === undefined ||
-                            value === null
-                        ) {
-                            value = "";
-                        }
-
-                        cells[newColumnId] =
-                            value;
-                    }
-                );
-
-                return {
-                    id: generateId(),
-                    cells
-                };
+            const columnMap = {};
+            normalized.columns.forEach((oldColumn, index) => {
+                columnMap[oldColumn.id] = importedTracker.columns[index].id;
             });
 
-        if (
-            !confirm(
-                `Import "${importedTracker.name}" as a new sheet?`
-            )
-        ) {
-            return;
+            importedTracker.rows = normalized.rows.map(row => {
+                const cells = {};
+                normalized.columns.forEach(column => {
+                    const newColumnId = columnMap[column.id];
+                    let value = row.cells?.[column.id];
+
+                    if (column.type === "checkbox") {
+                        value = value === true;
+                    } else if (value === undefined || value === null) {
+                        value = "";
+                    }
+
+                    cells[newColumnId] = value;
+                });
+
+                return { id: generateId(), cells };
+            });
         }
 
-        data.trackers.push(
-            importedTracker
-        );
+        if (!confirm(`Import "${importedTracker.name}" as a new sheet?`)) return;
 
-        activeTrackerId =
-            importedTracker.id;
+        data.trackers.push(importedTracker);
+        activeTrackerId = importedTracker.id;
 
-        await saveTracker(
-            importedTracker
-        );
-
+        await saveTracker(importedTracker);
         render();
-
-        showToast(
-            `"${importedTracker.name}" imported`
-        );
-
+        showToast(`"${importedTracker.name}" imported`);
     } catch (error) {
-        console.error(
-            "Sheet import failed:",
-            error
-        );
-
-        showToast(
-            error.message ||
-            "Invalid tracker JSON",
-            "error"
-        );
-
+        console.error("Sheet import failed:", error);
+        showToast(error.message || "Invalid tracker JSON", "error");
     } finally {
         event.target.value = "";
     }
@@ -2026,6 +2010,15 @@ window.duplicateTracker =
 
 window.toggleColumnMenu =
     toggleColumnMenu;
+
+window.addNoteCard =
+    addNoteCard;
+
+window.updateNoteCard =
+    updateNoteCard;
+
+window.deleteNoteCard =
+    deleteNoteCard;
 
 
 // ============================================================
