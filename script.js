@@ -728,6 +728,29 @@ function renderCell(row, column) {
 
     }
 
+    // Date columns use the browser's native date picker.
+    if (column.type === "date") {
+
+        return `
+
+            <td>
+
+                <input
+                    class="cell-input date-cell-input"
+                    type="date"
+                    value="${escapeAttribute(value)}"
+                    onchange="updateCell(
+                        '${row.id}',
+                        '${column.id}',
+                        this.value
+                    )"
+                >
+
+            </td>
+
+        `;
+
+    }
 
     return `
 
@@ -1077,14 +1100,15 @@ async function addColumn() {
 
     const typeChoice =
         prompt(
-            "Column type:\n\n1 = Text\n2 = Checkbox",
+            "Column type:\n\n1 = Text\n2 = Checkbox\n3 = Date",
             "1"
         );
 
 
     if (
         typeChoice !== "1" &&
-        typeChoice !== "2"
+        typeChoice !== "2" &&
+        typeChoice !== "3"
     ) {
         return;
     }
@@ -1099,7 +1123,9 @@ async function addColumn() {
         type:
             typeChoice === "2"
                 ? "checkbox"
-                : "text"
+                : typeChoice === "3"
+                    ? "date"
+                    : "text"
 
     };
 
