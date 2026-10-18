@@ -18,7 +18,7 @@
     <header class="topbar">
         <div class="brand">
             <span class="brand-icon">✓</span>
-            <span>Tracker</span>
+            <span>Notes & Trackers</span>
         </div>
 
         <div class="topbar-actions">
@@ -69,7 +69,10 @@
 
             <div class="sheet-section tracker-section">
                 <div class="sheet-section-header">
-                    <span class="sheet-section-title">TRACKERS</span>
+                    <button class="sheet-section-toggle" type="button" onclick="toggleSheetSection('trackerSection')" aria-expanded="true" aria-controls="trackerList" title="Collapse trackers">
+                        <span class="sheet-section-chevron" aria-hidden="true">⌄</span>
+                        <span class="sheet-section-title">TRACKERS</span>
+                    </button>
                     <span id="trackerCount" class="sheet-section-count">0</span>
                 </div>
                 <div id="trackerList" class="tracker-list"></div>
@@ -77,7 +80,10 @@
 
             <div class="sheet-section notes-section">
                 <div class="sheet-section-header">
-                    <span class="sheet-section-title">NOTES</span>
+                    <button class="sheet-section-toggle" type="button" onclick="toggleSheetSection('notesSection')" aria-expanded="true" aria-controls="notesList" title="Collapse notes">
+                        <span class="sheet-section-chevron" aria-hidden="true">⌄</span>
+                        <span class="sheet-section-title">NOTES</span>
+                    </button>
                     <span id="notesCount" class="sheet-section-count">0</span>
                 </div>
                 <div id="notesList" class="tracker-list notes-list"></div>

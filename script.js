@@ -94,6 +94,65 @@ function updateThemeButton() {
 }
 
 
+
+
+// ============================================================
+// SIDEBAR SECTION COLLAPSE / EXPAND
+// ============================================================
+
+function initializeSheetSections() {
+    const states = {
+        trackerSection: localStorage.getItem("trackerSectionCollapsed") === "true",
+        notesSection: localStorage.getItem("notesSectionCollapsed") === "true"
+    };
+
+    Object.entries(states).forEach(([sectionId, collapsed]) => {
+        applySheetSectionState(sectionId, collapsed);
+    });
+}
+
+function applySheetSectionState(sectionId, collapsed) {
+    const section = document.querySelector(`.${sectionId}`);
+    if (!section) return;
+
+    const list = section.querySelector(".tracker-list");
+    const toggle = section.querySelector(".sheet-section-toggle");
+    const chevron = section.querySelector(".sheet-section-chevron");
+
+    section.classList.toggle("collapsed", collapsed);
+
+    if (list) {
+        list.hidden = collapsed;
+    }
+
+    if (toggle) {
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+        toggle.title = collapsed
+            ? `Expand ${sectionId === "trackerSection" ? "trackers" : "notes"}`
+            : `Collapse ${sectionId === "trackerSection" ? "trackers" : "notes"}`;
+    }
+
+    if (chevron) {
+        chevron.textContent = collapsed ? "›" : "⌄";
+    }
+}
+
+function toggleSheetSection(sectionId) {
+    const section = document.querySelector(`.${sectionId}`);
+    if (!section) return;
+
+    const collapsed = !section.classList.contains("collapsed");
+    applySheetSectionState(sectionId, collapsed);
+
+    localStorage.setItem(
+        sectionId === "trackerSection"
+            ? "trackerSectionCollapsed"
+            : "notesSectionCollapsed",
+        String(collapsed)
+    );
+}
+
+
 // ============================================================
 // DEFAULT TRACKER
 // ============================================================
@@ -235,6 +294,7 @@ async function loadDataFromFirestore() {
 async function initialize() {
 
     initializeTheme();
+    initializeSheetSections();
 
     try {
 
@@ -1976,6 +2036,9 @@ window.setNoteTextColor =
 
 window.deleteNoteCard =
     deleteNoteCard;
+
+window.toggleSheetSection =
+    toggleSheetSection;
 
 
 // ============================================================
