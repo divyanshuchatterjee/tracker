@@ -471,39 +471,79 @@ function render() {
 
 function renderTrackerList() {
 
-    const container =
+    const trackerContainer =
         document.getElementById("trackerList");
+    const notesContainer =
+        document.getElementById("notesList");
 
-    if (!container) return;
+    if (!trackerContainer || !notesContainer) return;
 
-    container.innerHTML = "";
+    trackerContainer.innerHTML = "";
+    notesContainer.innerHTML = "";
 
-    data.trackers.forEach(tracker => {
+    const trackers = data.trackers.filter(
+        tracker => tracker.type !== "notes"
+    );
 
-        const item =
-            document.createElement("div");
+    const notes = data.trackers.filter(
+        tracker => tracker.type === "notes"
+    );
+
+    const trackerCount = document.getElementById("trackerCount");
+    const notesCount = document.getElementById("notesCount");
+
+    if (trackerCount) trackerCount.textContent = trackers.length;
+    if (notesCount) notesCount.textContent = notes.length;
+
+    const createItem = (sheet) => {
+        const item = document.createElement("div");
 
         item.className =
             "tracker-item" +
-            (
-                tracker.id === activeTrackerId
-                    ? " active"
-                    : ""
-            );
+            (sheet.id === activeTrackerId ? " active" : "");
 
-        item.onclick = () =>
-            selectTracker(tracker.id);
+        item.onclick = () => selectTracker(sheet.id);
+
+        const isNotes = sheet.type === "notes";
 
         item.innerHTML = `
+            <span class="tracker-item-icon ${isNotes ? "notes-icon" : "tracker-icon"}" aria-hidden="true">
+                ${isNotes
+                    ? `<svg viewBox="0 0 24 24" fill="none"><path d="M6 3.75h9.25L19.5 8v12.25H6A1.5 1.5 0 0 1 4.5 18.75V5.25A1.5 1.5 0 0 1 6 3.75Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14.5 3.75V8h4.25M8 12h8M8 15.5h5.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+                    : `<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M4 9h16M9 9v11M14 9v11M4 14h16" stroke="currentColor" stroke-width="1.6"/></svg>`}
+            </span>
             <span class="tracker-item-name">
-                ${escapeHTML(tracker.name)}
+                ${escapeHTML(sheet.name)}
             </span>
         `;
 
-        container.appendChild(item);
-    });
-}
+        return item;
+    };
 
+    if (trackers.length) {
+        trackers.forEach(tracker => {
+            trackerContainer.appendChild(createItem(tracker));
+        });
+    } else {
+        trackerContainer.innerHTML = `
+            <div class="sheet-section-empty">
+                No trackers yet
+            </div>
+        `;
+    }
+
+    if (notes.length) {
+        notes.forEach(note => {
+            notesContainer.appendChild(createItem(note));
+        });
+    } else {
+        notesContainer.innerHTML = `
+            <div class="sheet-section-empty">
+                No notes yet
+            </div>
+        `;
+    }
+}
 
 // ============================================================
 // MAIN

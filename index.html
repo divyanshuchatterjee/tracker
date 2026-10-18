@@ -33,11 +33,11 @@
             <label class="secondary-button import-button">
                 Import JSON
                 <input
-                        type="file"
-                        id="importFile"
-                        accept=".json"
-                        onchange="importJSON(event)"
-                        hidden
+                    type="file"
+                    id="importFile"
+                    accept=".json"
+                    onchange="importJSON(event)"
+                    hidden
                 >
             </label>
         </div>
@@ -52,22 +52,36 @@
 
             <div class="sidebar-header">
                 <div>
-                    <div class="sidebar-title">Trackers</div>
+                    <div class="sidebar-title">Sheets</div>
                     <div class="sidebar-subtitle">
-                        Manage your trackers
+                        Organize your trackers and notes
                     </div>
                 </div>
 
                 <button
-                        class="add-tracker-button"
-                        onclick="addTracker()"
-                        title="Add tracker"
+                    class="add-tracker-button"
+                    onclick="addTracker()"
+                    title="Add tracker or notes"
                 >
                     +
                 </button>
             </div>
 
-            <div id="trackerList" class="tracker-list"></div>
+            <div class="sheet-section tracker-section">
+                <div class="sheet-section-header">
+                    <span class="sheet-section-title">TRACKERS</span>
+                    <span id="trackerCount" class="sheet-section-count">0</span>
+                </div>
+                <div id="trackerList" class="tracker-list"></div>
+            </div>
+
+            <div class="sheet-section notes-section">
+                <div class="sheet-section-header">
+                    <span class="sheet-section-title">NOTES</span>
+                    <span id="notesCount" class="sheet-section-count">0</span>
+                </div>
+                <div id="notesList" class="tracker-list notes-list"></div>
+            </div>
 
         </aside>
 
