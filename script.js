@@ -793,7 +793,8 @@ async function saveCurrentTracker() {
 // ============================================================
 
 async function addTracker() {
-    const createNotes = confirm("Create a Notes sheet?\n\nOK = Notes\nCancel = Tracker");
+    const createNotes = await chooseSheetType();
+    if (createNotes === null) return;
 
     const item = createNotes
         ? {
@@ -828,6 +829,70 @@ async function addTracker() {
         render();
     }
 }
+
+// ============================================================
+// SHEET TYPE PICKER
+// ============================================================
+
+function chooseSheetType() {
+    return new Promise((resolve) => {
+        const modal = document.getElementById("sheetTypeModal");
+        const notesCheckbox = document.getElementById("sheetTypeNotes");
+        const trackerCheckbox = document.getElementById("sheetTypeTracker");
+        const createButton = document.getElementById("sheetTypeCreate");
+        const cancelButton = document.getElementById("sheetTypeCancel");
+
+        if (!modal || !notesCheckbox || !trackerCheckbox) {
+            resolve(false);
+            return;
+        }
+
+        // Tracker is selected by default.
+        notesCheckbox.checked = false;
+        trackerCheckbox.checked = true;
+        modal.classList.add("show");
+
+        const close = (value) => {
+            modal.classList.remove("show");
+            notesCheckbox.checked = false;
+            trackerCheckbox.checked = false;
+            resolve(value);
+        };
+
+        const selectOnly = (selected) => {
+            if (selected === notesCheckbox) {
+                notesCheckbox.checked = true;
+                trackerCheckbox.checked = false;
+            } else {
+                trackerCheckbox.checked = true;
+                notesCheckbox.checked = false;
+            }
+        };
+
+        // Actual checkboxes, but only one can be selected at a time.
+        notesCheckbox.onchange = () => selectOnly(notesCheckbox);
+        trackerCheckbox.onchange = () => selectOnly(trackerCheckbox);
+
+        createButton.onclick = () => {
+            close(notesCheckbox.checked);
+        };
+
+        cancelButton.onclick = () => close(null);
+
+        modal.onclick = (event) => {
+            if (event.target === modal) close(null);
+        };
+
+        const onKeyDown = (event) => {
+            if (event.key === "Escape") {
+                document.removeEventListener("keydown", onKeyDown);
+                close(null);
+            }
+        };
+        document.addEventListener("keydown", onKeyDown);
+    });
+}
+
 
 // ============================================================
 // NOTES

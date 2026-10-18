@@ -33,11 +33,11 @@
             <label class="secondary-button import-button">
                 Import JSON
                 <input
-                    type="file"
-                    id="importFile"
-                    accept=".json"
-                    onchange="importJSON(event)"
-                    hidden
+                        type="file"
+                        id="importFile"
+                        accept=".json"
+                        onchange="importJSON(event)"
+                        hidden
                 >
             </label>
         </div>
@@ -59,9 +59,9 @@
                 </div>
 
                 <button
-                    class="add-tracker-button"
-                    onclick="addTracker()"
-                    title="Add tracker"
+                        class="add-tracker-button"
+                        onclick="addTracker()"
+                        title="Add tracker"
                 >
                     +
                 </button>
@@ -81,6 +81,44 @@
 
     </div>
 
+</div>
+
+
+<!-- SHEET TYPE MODAL -->
+<div id="sheetTypeModal" class="sheet-type-modal" aria-hidden="true">
+    <div class="sheet-type-dialog" role="dialog" aria-modal="true" aria-labelledby="sheetTypeTitle">
+        <div class="sheet-type-header">
+            <div>
+                <h2 id="sheetTypeTitle">Create new sheet</h2>
+                <p>Choose what you want to create.</p>
+            </div>
+        </div>
+
+        <div class="sheet-type-options">
+            <label class="sheet-type-option">
+                <input type="checkbox" id="sheetTypeTracker" checked>
+                <span class="sheet-type-check"></span>
+                <span class="sheet-type-option-text">
+                    <strong>Tracker</strong>
+                    <small>A table with rows and columns</small>
+                </span>
+            </label>
+
+            <label class="sheet-type-option">
+                <input type="checkbox" id="sheetTypeNotes">
+                <span class="sheet-type-check"></span>
+                <span class="sheet-type-option-text">
+                    <strong>Notes</strong>
+                    <small>Cards with rich text blocks</small>
+                </span>
+            </label>
+        </div>
+
+        <div class="sheet-type-actions">
+            <button id="sheetTypeCancel" class="secondary-button">Cancel</button>
+            <button id="sheetTypeCreate" class="primary-button">Create</button>
+        </div>
+    </div>
 </div>
 
 
